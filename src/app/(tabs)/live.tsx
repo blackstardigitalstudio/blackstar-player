@@ -1,0 +1,22 @@
+import { useRouter } from 'expo-router';
+import { View } from 'react-native';
+import { Browser } from '@/components/Browser';
+import { useStore } from '@/store/useStore';
+import { openItem } from '@/lib/nav';
+
+export default function Live() {
+  const router = useRouter();
+  const content = useStore((s) => s.content);
+  return (
+    <View style={{ flex: 1 }}>
+      <Browser
+        title="Live TV"
+        items={content.live}
+        categories={content.categories}
+        kind="live"
+        variant="tile"
+        onSelect={(i) => openItem(router, i)}
+      />
+    </View>
+  );
+}

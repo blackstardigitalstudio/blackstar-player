@@ -1,0 +1,68 @@
+name: Build Android APK
+
+# Builds a self-contained, installable APK with no EAS / Expo account and no
+# external services — just Expo prebuild + Gradle on a GitHub runner.
+# Made in Italy.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo prebuild (Android)
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build release APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk blackstar-player.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackstar-player-apk
+          path: blackstar-player.apk
+          if-no-files-found: error
+
+      - name: Publish to Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Blackstar Player (latest build)
+          files: blackstar-player.apk
+          body: |
+            Build automatica dell'APK installabile su box Android / Android TV.
+            Nessun account, nessun server esterno. Made in Italy 🇮🇹

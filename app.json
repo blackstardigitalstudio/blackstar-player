@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Blackstar Player",
+    "slug": "blackstar-player",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "icon": "./assets/images/icon.png",
+    "scheme": "blackstarplayer",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0F",
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/expo.icon"
+    },
+    "android": {
+      "package": "studio.blackstar.player",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A0F",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0A0F",
+          "android": {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 160
+          }
+        }
+      ],
+      "expo-video",
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "largeHeap": true,
+            "enableProguardInReleaseBuilds": false,
+            "enableMinifyInReleaseBuilds": false
+          }
+        }
+      ],
+      "./plugins/withTVRemote",
+      "./plugins/withAndroidTV"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
