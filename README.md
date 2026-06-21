@@ -13,9 +13,13 @@ Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
 
 - **Tre modalità d'accesso**
   - **Xtream Codes** con i tre fattori: **username · password · DNS server**
+  - **Multi-DNS con failover**: fino a 5 DNS per le stesse credenziali; se uno non risponde,
+    l'app passa automaticamente al successivo finché la lista si carica
   - **Lista M3U / URL** (classica `get.php?...type=m3u_plus` o qualsiasi `.m3u`)
   - Più **profili** salvati, con cambio rapido dalle Impostazioni
 - **Live TV · Film · Serie TV** con categorie, copertine e dettaglio stagioni/episodi
+- **Continua a guardare**: film ed episodi ricordano il **punto esatto** (salvato in locale) e
+  riprendono da lì; barra di avanzamento in Home e sugli episodi
 - **Ricerca intelligente**: suggerimenti automatici mentre scrivi **+ titoli correlati / consigliati**
 - **Home con consigli** ("Continua a guardare", "Consigliati per te", "Preferiti")
 - **Zapping con barra numerica**: digita il numero del canale per saltarci direttamente

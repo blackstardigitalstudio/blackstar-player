@@ -57,11 +57,26 @@ export interface SourceConfig {
   // M3U
   m3uUrl?: string;
   // Xtream (the three factors: username, password, DNS host)
-  host?: string; // e.g. http://my.dns.host:8080
+  host?: string; // active/working DNS host, e.g. http://my.dns.host:8080
+  /** Extra DNS hosts (failover) for the same credentials. */
+  hosts?: string[];
   username?: string;
   password?: string;
   /** EPG url (optional, m3u). */
   epgUrl?: string;
+}
+
+/** Saved playback position for resume ("Continua a guardare"). */
+export interface ProgressEntry {
+  key: string;
+  kind: 'movie' | 'episode';
+  title: string;
+  poster?: string;
+  /** Exact playable url to resume from. */
+  url: string;
+  position: number; // seconds
+  duration: number; // seconds
+  updatedAt: number;
 }
 
 export interface LoadedContent {

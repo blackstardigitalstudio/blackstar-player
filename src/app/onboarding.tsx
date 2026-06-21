@@ -2,15 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { BrandMark, Field, PrimaryButton, Screen, Txt } from '@/components/ui';
+import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { useStore } from '@/store/useStore';
 import { parseM3U } from '@/lib/m3u';
-import { loadXtream, xtreamLogin } from '@/lib/xtream';
+import { loadXtreamFailover } from '@/lib/xtream';
 import type { SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 type Mode = 'm3u' | 'xtream';
+const MAX_DNS = 5;
 
 export default function Onboarding() {
   const router = useRouter();
@@ -20,11 +21,15 @@ export default function Onboarding() {
   const [mode, setMode] = useState<Mode>('xtream');
   const [name, setName] = useState('');
   const [m3uUrl, setM3uUrl] = useState('');
-  const [host, setHost] = useState('');
+  const [hosts, setHosts] = useState<string[]>(['']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setHostAt = (i: number, val: string) => setHosts((h) => h.map((x, j) => (j === i ? val : x)));
+  const addHost = () => setHosts((h) => (h.length < MAX_DNS ? [...h, ''] : h));
+  const removeHost = (i: number) => setHosts((h) => h.filter((_, j) => j !== i));
 
   async function submit() {
     setError(null);
@@ -48,21 +53,23 @@ export default function Onboarding() {
         };
         await addSource(src, content);
       } else {
-        if (!host.trim() || !username.trim() || !password.trim()) {
-          throw new Error('Compila DNS server, username e password.');
+        const cleanHosts = hosts.map((h) => h.trim()).filter(Boolean);
+        if (!cleanHosts.length || !username.trim() || !password.trim()) {
+          throw new Error('Compila almeno un DNS server, username e password.');
         }
         const src: SourceConfig = {
           id,
           type: 'xtream',
           name: name.trim() || username.trim(),
-          host: host.trim(),
+          host: cleanHosts[0],
+          hosts: cleanHosts,
           username: username.trim(),
           password: password.trim(),
           createdAt: Date.now(),
         };
-        const info = await xtreamLogin(src);
-        src.name = name.trim() || info.name;
-        const content = await loadXtream(src, liveExt);
+        // Tries each DNS in order until one authenticates and loads.
+        const { content, host } = await loadXtreamFailover(src, liveExt);
+        src.host = host;
         await addSource(src, content);
       }
       router.replace('/(tabs)/home');
@@ -99,9 +106,34 @@ export default function Onboarding() {
             />
           ) : (
             <>
-              <Field label="DNS server" value={host} onChangeText={setHost} placeholder="http://dns.server:8080" keyboardType="url" />
               <Field label="Username" value={username} onChangeText={setUsername} placeholder="Il tuo username" />
               <Field label="Password" value={password} onChangeText={setPassword} placeholder="La tua password" secureTextEntry />
+
+              <View style={{ gap: spacing.sm }}>
+                <Txt variant="small">DNS server (con failover automatico)</Txt>
+                {hosts.map((h, i) => (
+                  <View key={i} style={styles.dnsRow}>
+                    <View style={{ flex: 1 }}>
+                      <Field
+                        label={i === 0 ? 'DNS principale' : `DNS alternativo ${i}`}
+                        value={h}
+                        onChangeText={(t) => setHostAt(i, t)}
+                        placeholder="http://dns.server:8080"
+                        keyboardType="url"
+                      />
+                    </View>
+                    {i > 0 ? (
+                      <Focusable onSelect={() => removeHost(i)} style={styles.del} focusStyle={{ borderColor: colors.borderFocus }}>
+                        <Ionicons name="trash" size={18} color={colors.danger} />
+                      </Focusable>
+                    ) : null}
+                  </View>
+                ))}
+                {hosts.length < MAX_DNS ? (
+                  <GhostButton label="Aggiungi un altro DNS" icon="add" onPress={addHost} />
+                ) : null}
+                <Txt variant="tiny">Se un DNS non risponde, l’app passa automaticamente al successivo.</Txt>
+              </View>
             </>
           )}
 
@@ -163,6 +195,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  dnsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
+  del: {
+    padding: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: 0,
   },
   error: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
 });

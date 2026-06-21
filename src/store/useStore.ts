@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { parseM3U } from '@/lib/m3u';
-import { loadXtream } from '@/lib/xtream';
+import { loadXtream, loadXtreamFailover } from '@/lib/xtream';
 import {
   KEYS,
   cacheContent,
@@ -10,7 +10,7 @@ import {
   remove,
   setJSON,
 } from '@/lib/storage';
-import type { LoadedContent, MediaItem, SourceConfig } from '@/lib/types';
+import type { LoadedContent, MediaItem, ProgressEntry, SourceConfig } from '@/lib/types';
 
 export interface Settings {
   liveExt: 'ts' | 'm3u8';
@@ -45,6 +45,7 @@ interface State {
   error: string | null;
   favorites: MediaItem[];
   recents: MediaItem[];
+  progress: Record<string, ProgressEntry>;
   lastLiveId: string | null;
   settings: Settings;
 
@@ -60,6 +61,10 @@ interface State {
   clearRecents: () => Promise<void>;
   clearCache: () => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
+  saveProgress: (entry: Omit<ProgressEntry, 'updatedAt'>) => Promise<void>;
+  getProgress: (key: string) => ProgressEntry | undefined;
+  continueWatching: () => ProgressEntry[];
+  clearProgress: () => Promise<void>;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -71,15 +76,17 @@ export const useStore = create<State>((set, get) => ({
   error: null,
   favorites: [],
   recents: [],
+  progress: {},
   lastLiveId: null,
   settings: DEFAULT_SETTINGS,
 
   hydrate: async () => {
-    const [sources, activeId, favorites, recents, settings] = await Promise.all([
+    const [sources, activeId, favorites, recents, progress, settings] = await Promise.all([
       getJSON<SourceConfig[]>(KEYS.sources, []),
       getJSON<string | null>(KEYS.activeSource, null),
       getJSON<MediaItem[]>(KEYS.favorites, []),
       getJSON<MediaItem[]>(KEYS.recents, []),
+      getJSON<Record<string, ProgressEntry>>(KEYS.progress, {}),
       getJSON<Settings>(KEYS.settings, DEFAULT_SETTINGS),
     ]);
     const active = activeId && sources.find((s) => s.id === activeId) ? activeId : sources[0]?.id ?? null;
@@ -88,6 +95,7 @@ export const useStore = create<State>((set, get) => ({
       activeId: active,
       favorites,
       recents,
+      progress,
       settings: { ...DEFAULT_SETTINGS, ...settings },
       hydrated: true,
     });
@@ -142,7 +150,14 @@ export const useStore = create<State>((set, get) => ({
         if (!res.ok) throw new Error(`Errore caricamento lista (HTTP ${res.status})`);
         loaded = parseM3U(await res.text());
       } else {
-        loaded = await loadXtream(src, settings.liveExt);
+        // try each DNS host until one works (failover)
+        const { content, host } = await loadXtreamFailover(src, settings.liveExt);
+        loaded = content;
+        if (host && host !== src.host) {
+          const updated = get().sources.map((s) => (s.id === src.id ? { ...s, host } : s));
+          await setJSON(KEYS.sources, updated);
+          set({ sources: updated });
+        }
       }
       set({ content: loaded, loading: false });
       await cacheContent(activeId, loaded);
@@ -187,5 +202,31 @@ export const useStore = create<State>((set, get) => ({
     const settings = { ...get().settings, ...patch };
     set({ settings });
     await setJSON(KEYS.settings, settings);
+  },
+
+  saveProgress: async (entry) => {
+    if (!entry.key || !entry.url || !(entry.position > 0)) return;
+    const progress = { ...get().progress };
+    const ratio = entry.duration > 0 ? entry.position / entry.duration : 0;
+    // consider it watched once near the end → drop from "continue watching"
+    if (entry.duration > 0 && ratio >= 0.95) {
+      delete progress[entry.key];
+    } else {
+      progress[entry.key] = { ...entry, updatedAt: Date.now() };
+    }
+    set({ progress });
+    await setJSON(KEYS.progress, progress);
+  },
+
+  getProgress: (key) => get().progress[key],
+
+  continueWatching: () =>
+    Object.values(get().progress)
+      .filter((p) => p.position > 5)
+      .sort((a, b) => b.updatedAt - a.updatedAt),
+
+  clearProgress: async () => {
+    set({ progress: {} });
+    await setJSON(KEYS.progress, {});
   },
 }));

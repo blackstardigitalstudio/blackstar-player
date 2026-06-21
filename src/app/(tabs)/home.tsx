@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { ContinueRail } from '@/components/ContinueRail';
 import { Rail } from '@/components/Rail';
 import { Empty, GhostButton, Spinner, Txt } from '@/components/ui';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
-import { openItem } from '@/lib/nav';
+import { openItem, playUrl } from '@/lib/nav';
 import { recommendFromRecents } from '@/lib/search';
 import type { MediaItem } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -18,6 +19,7 @@ export default function Home() {
   const error = useStore((s) => s.error);
   const recents = useStore((s) => s.recents);
   const favorites = useStore((s) => s.favorites);
+  const progress = useStore((s) => s.progress);
   const sources = useStore((s) => s.sources);
   const activeId = useStore((s) => s.activeId);
   const refresh = useStore((s) => s.refresh);
@@ -26,6 +28,10 @@ export default function Home() {
   const activeName = sources.find((s) => s.id === activeId)?.name ?? '';
   const pool = useMemo(() => [...content.movies, ...content.series, ...content.live], [content]);
   const recommended = useMemo(() => recommendFromRecents(recents, pool), [recents, pool]);
+  const continueList = useMemo(
+    () => Object.values(progress).filter((p) => p.position > 5).sort((a, b) => b.updatedAt - a.updatedAt),
+    [progress],
+  );
 
   // Number-bar zapping: type a channel number to jump straight to it.
   const [typed, setTyped] = useState('');
@@ -92,7 +98,10 @@ export default function Home() {
         />
       ) : (
         <ScrollView contentContainerStyle={{ paddingTop: spacing.sm, paddingBottom: spacing.xxl }}>
-          <Rail title="Continua a guardare" items={recents} onSelect={go} variant="poster" />
+          <ContinueRail
+            entries={continueList}
+            onSelect={(e) => playUrl(router, e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position })}
+          />
           <Rail title="Consigliati per te" items={recommended} onSelect={go} variant="poster" />
           <Rail title="I tuoi preferiti" items={favorites} onSelect={go} variant="poster" />
           <Rail title="Canali Live" items={content.live.slice(0, 24)} onSelect={go} variant="tile" />

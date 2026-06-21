@@ -36,7 +36,7 @@ interface Current {
 export default function Player() {
   useKeepAwake();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; url?: string; title?: string }>();
+  const params = useLocalSearchParams<{ id?: string; url?: string; title?: string; key?: string; poster?: string; resumeAt?: string }>();
   const content = useStore((s) => s.content);
   const sources = useStore((s) => s.sources);
   const activeId = useStore((s) => s.activeId);
@@ -44,6 +44,8 @@ export default function Player() {
   const addRecent = useStore((s) => s.addRecent);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
   const isFavorite = useStore((s) => s.isFavorite);
+  const saveProgress = useStore((s) => s.saveProgress);
+  const getProgress = useStore((s) => s.getProgress);
 
   const source = sources.find((s) => s.id === activeId);
 
@@ -68,10 +70,30 @@ export default function Player() {
   const [overlay, setOverlay] = useState(true);
   const attempt = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didSeek = useRef(false);
 
   const player = useVideoPlayer(cur.candidates[0] ? buildSource(cur.candidates[0]) : null, (p) => {
     p.play();
   });
+
+  // Resume context: movies & episodes remember the exact position ("Continua a guardare").
+  const progressCtx = useMemo(() => {
+    if (cur.isLive) return null;
+    if (cur.item && cur.item.kind === 'movie') {
+      return { key: cur.item.id, kind: 'movie' as const, title: cur.item.name, poster: cur.item.logo, url: cur.candidates[0] };
+    }
+    if (params.url) {
+      return { key: params.key || params.url, kind: 'episode' as const, title: params.title || cur.title, poster: params.poster, url: params.url };
+    }
+    return null;
+  }, [cur, params.url, params.key, params.title, params.poster]);
+
+  const resumeAt = useMemo(() => {
+    if (!progressCtx) return 0;
+    const explicit = Number(params.resumeAt) || 0;
+    return explicit > 0 ? explicit : getProgress(progressCtx.key)?.position || 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progressCtx, params.resumeAt]);
 
   const switchTo = useCallback(
     (next: Current) => {
@@ -97,6 +119,12 @@ export default function Player() {
       if (status === 'readyToPlay') {
         setBuffering(false);
         setError(null);
+        if (!didSeek.current && resumeAt > 2) {
+          try {
+            player.currentTime = resumeAt;
+          } catch {}
+          didSeek.current = true;
+        }
       } else if (status === 'loading') {
         setBuffering(true);
       } else if (status === 'error') {
@@ -115,7 +143,34 @@ export default function Player() {
       sub.remove();
       psub.remove();
     };
-  }, [player, cur.candidates, settings.survivalMode]);
+  }, [player, cur.candidates, settings.survivalMode, resumeAt]);
+
+  // Persist the exact playback position every few seconds and on exit.
+  useEffect(() => {
+    if (!progressCtx) return;
+    const save = () => {
+      try {
+        const pos = player.currentTime ?? 0;
+        const dur = player.duration ?? 0;
+        if (pos > 5) {
+          saveProgress({
+            key: progressCtx.key,
+            kind: progressCtx.kind,
+            title: progressCtx.title,
+            poster: progressCtx.poster,
+            url: progressCtx.url,
+            position: pos,
+            duration: dur,
+          });
+        }
+      } catch {}
+    };
+    const id = setInterval(save, 5000);
+    return () => {
+      clearInterval(id);
+      save();
+    };
+  }, [player, progressCtx, saveProgress]);
 
   const showOverlay = useCallback(() => {
     setOverlay(true);

@@ -19,6 +19,7 @@ export default function SeriesDetail() {
   const sources = useStore((s) => s.sources);
   const activeId = useStore((s) => s.activeId);
   const addRecent = useStore((s) => s.addRecent);
+  const getProgress = useStore((s) => s.getProgress);
 
   const item = useMemo(() => content.series.find((x) => x.id === id), [content.series, id]);
   const source = sources.find((s) => s.id === activeId);
@@ -119,24 +120,40 @@ export default function SeriesDetail() {
                   key={ep.id}
                   onSelect={() => {
                     addRecent({ ...item });
-                    playUrl(router, ep.url, `${item.name} · S${ep.season}E${ep.episode}`);
+                    const key = `ep:${ep.id}`;
+                    playUrl(router, ep.url, `${item.name} · S${ep.season}E${ep.episode}`, {
+                      key,
+                      poster: item.logo,
+                      resumeAt: getProgress(key)?.position,
+                    });
                   }}
                   style={styles.ep}
                   focusStyle={styles.epFocus}
                 >
-                  {(f) => (
-                    <View style={styles.epInner}>
-                      <View style={styles.epNum}>
-                        <Txt variant="small" color={colors.text}>
-                          {ep.episode}
-                        </Txt>
+                  {(f) => {
+                    const p = getProgress(`ep:${ep.id}`);
+                    const pct = p && p.duration > 0 ? Math.min(1, p.position / p.duration) : 0;
+                    return (
+                      <View style={styles.epInner}>
+                        <View style={styles.epNum}>
+                          <Txt variant="small" color={colors.text}>
+                            {ep.episode}
+                          </Txt>
+                        </View>
+                        <View style={{ flex: 1, gap: 6 }}>
+                          <Txt variant="body" numberOfLines={1}>
+                            {ep.title}
+                          </Txt>
+                          {pct > 0 ? (
+                            <View style={styles.epTrack}>
+                              <View style={[styles.epFill, { width: `${pct * 100}%` }]} />
+                            </View>
+                          ) : null}
+                        </View>
+                        <Ionicons name={pct > 0 ? 'play-circle' : 'play-circle-outline'} size={26} color={f ? colors.accent : colors.textMuted} />
                       </View>
-                      <Txt variant="body" style={{ flex: 1 }} numberOfLines={1}>
-                        {ep.title}
-                      </Txt>
-                      <Ionicons name="play-circle" size={26} color={f ? colors.accent : colors.textMuted} />
-                    </View>
-                  )}
+                    );
+                  }}
                 </Focusable>
               ))}
             </View>
@@ -179,4 +196,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  epTrack: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' },
+  epFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
 });

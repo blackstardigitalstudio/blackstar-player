@@ -6,6 +6,7 @@ export const KEYS = {
   activeSource: 'bs.activeSourceId',
   favorites: 'bs.favorites',
   recents: 'bs.recents',
+  progress: 'bs.progress',
   settings: 'bs.settings',
   content: (sourceId: string) => `bs.content.${sourceId}`,
 };

@@ -133,6 +133,12 @@ export default function Settings() {
       </Section>
 
       <Section title="Cronologia">
+        <Row
+          icon="play-skip-forward"
+          label={`Svuota “Continua a guardare” (${Object.keys(s.progress).length})`}
+          danger
+          onPress={() => s.clearProgress()}
+        />
         <Row icon="time-outline" label={`Cancella cronologia (${s.recents.length})`} danger onPress={() => s.clearRecents()} />
       </Section>
 

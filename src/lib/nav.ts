@@ -12,6 +12,20 @@ export function openItem(router: Router, item: MediaItem) {
   }
 }
 
-export function playUrl(router: Router, url: string, title: string) {
-  router.push({ pathname: '/player', params: { url, title } });
+export function playUrl(
+  router: Router,
+  url: string,
+  title: string,
+  opts?: { key?: string; poster?: string; resumeAt?: number },
+) {
+  router.push({
+    pathname: '/player',
+    params: {
+      url,
+      title,
+      ...(opts?.key ? { key: opts.key } : {}),
+      ...(opts?.poster ? { poster: opts.poster } : {}),
+      ...(opts?.resumeAt && opts.resumeAt > 0 ? { resumeAt: String(Math.floor(opts.resumeAt)) } : {}),
+    },
+  });
 }

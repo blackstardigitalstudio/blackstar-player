@@ -1,5 +1,48 @@
 import type { Category, Episode, LoadedContent, MediaItem, Season, SourceConfig } from './types';
 
+/** Ordered, de-duplicated list of DNS hosts to try (active host first). */
+export function candidateHosts(c: SourceConfig): string[] {
+  const all = (c.hosts && c.hosts.length ? c.hosts : c.host ? [c.host] : [])
+    .map((h) => normalizeHost(h))
+    .filter(Boolean);
+  const active = c.host ? normalizeHost(c.host) : '';
+  const ordered = active ? [active, ...all.filter((h) => h !== active)] : all;
+  return Array.from(new Set(ordered));
+}
+
+/** Probe each DNS host and return the first that authenticates. */
+export async function pickWorkingHost(c: SourceConfig): Promise<{ host: string; name: string }> {
+  const hosts = candidateHosts(c);
+  if (!hosts.length) throw new Error('Inserisci almeno un DNS server.');
+  for (const host of hosts) {
+    try {
+      const info = await xtreamLogin({ ...c, host });
+      return { host, name: info.name };
+    } catch {
+      // try next DNS
+    }
+  }
+  throw new Error('Nessun DNS funzionante con queste credenziali.');
+}
+
+/** Load content, switching DNS host until one works. Returns the working host. */
+export async function loadXtreamFailover(
+  c: SourceConfig,
+  liveExt = 'ts',
+): Promise<{ content: LoadedContent; host: string }> {
+  const hosts = candidateHosts(c);
+  for (const host of hosts) {
+    try {
+      await xtreamLogin({ ...c, host });
+      const content = await loadXtream({ ...c, host }, liveExt);
+      return { content, host };
+    } catch {
+      // try next DNS
+    }
+  }
+  throw new Error('Impossibile caricare la lista: nessun DNS risponde.');
+}
+
 export function normalizeHost(input: string): string {
   let h = input.trim();
   if (!h) return h;
