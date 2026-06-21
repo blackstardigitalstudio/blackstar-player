@@ -9,7 +9,7 @@ import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
 import { getShortEpg, rebuildLiveUrl, type EpgItem } from '@/lib/xtream';
-import { openCastSettings } from '@/lib/cast';
+import { CastControls } from '@/components/CastControls';
 import { useT } from '@/i18n';
 import type { MediaItem, SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -337,7 +337,7 @@ export default function Player() {
                 onPress={() => cur.item && toggleFavorite(cur.item)}
               />
             ) : null}
-            <CtrlButton icon="tv-outline" label={t('pl.cast')} onPress={() => openCastSettings()} />
+            <CastControls url={cur.candidates[0]} title={cur.title} />
           </View>
         </>
       ) : null}

@@ -59,7 +59,8 @@
       ],
       "./plugins/withTVRemote",
       "./plugins/withAndroidTV",
-      "expo-localization"
+      "expo-localization",
+      "react-native-google-cast"
     ],
     "experiments": {
       "typedRoutes": true,
