@@ -9,7 +9,7 @@ import {
   clearAllContentCache,
   getJSON,
   loadCachedContent,
-  remove,
+  removeContentCache,
   setJSON,
 } from '@/lib/storage';
 import type { LoadedContent, MediaItem, ProgressEntry, SourceConfig } from '@/lib/types';
@@ -134,7 +134,7 @@ export const useStore = create<State>((set, get) => ({
   removeSource: async (id) => {
     const sources = get().sources.filter((s) => s.id !== id);
     await setJSON(KEYS.sources, sources);
-    await remove(KEYS.content(id));
+    await removeContentCache(id);
     const activeId = get().activeId === id ? sources[0]?.id ?? null : get().activeId;
     await setJSON(KEYS.activeSource, activeId);
     set({ sources, activeId, content: EMPTY });

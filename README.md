@@ -31,7 +31,8 @@ Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
 - **Player** con play/pausa, formato immagine (Adatta/Riempi/Estendi), preferiti e cambio canale Live
 - **Ottimizzato per il telecomando** (D-pad): navigazione spaziale a fuoco, tasti freccia/OK/Indietro,
   tasti numerici e canale +/−. Funziona anche al tatto.
-- **Veloce**: cache locale dei contenuti, liste virtualizzate, motore Hermes, nuova architettura RN.
+- **Veloce**: cache dei contenuti su **file locale** (riapertura istantanea anche con liste enormi,
+  senza limiti di dimensione), liste virtualizzate, motore Hermes, nuova architettura RN.
 - **Tema Blackstar**: nero profondo + accento **viola/magenta**, tipografia leggibile a distanza.
 
 ## 🎨 Brand

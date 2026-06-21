@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Directory, File, Paths } from 'expo-file-system';
 import type { LoadedContent } from './types';
 
 export const KEYS = {
@@ -8,7 +9,6 @@ export const KEYS = {
   recents: 'bs.recents',
   progress: 'bs.progress',
   settings: 'bs.settings',
-  content: (sourceId: string) => `bs.content.${sourceId}`,
 };
 
 export async function getJSON<T>(key: string, fallback: T): Promise<T> {
@@ -24,7 +24,7 @@ export async function setJSON(key: string, value: unknown): Promise<void> {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // ignore quota errors; content cache is best-effort
+    // ignore quota errors for small data
   }
 }
 
@@ -34,18 +34,53 @@ export async function remove(key: string): Promise<void> {
   } catch {}
 }
 
-/** Content cache is large; store stripped of internal episode arrays to stay light. */
+/**
+ * Content can be huge (tens of thousands of items), so it is cached on the
+ * filesystem (no AsyncStorage size limit) for instant reopen without a reload.
+ */
+const CONTENT_PREFIX = 'bs-content-';
+function contentFile(sourceId: string) {
+  return new File(Paths.document, `${CONTENT_PREFIX}${sourceId}.json`);
+}
+
 export async function cacheContent(sourceId: string, content: LoadedContent) {
-  await setJSON(KEYS.content(sourceId), content);
+  try {
+    const f = contentFile(sourceId);
+    if (f.exists) f.delete();
+    f.create();
+    f.write(JSON.stringify(content));
+  } catch {
+    // best-effort cache
+  }
 }
 
 export async function loadCachedContent(sourceId: string): Promise<LoadedContent | null> {
-  return getJSON<LoadedContent | null>(KEYS.content(sourceId), null);
+  try {
+    const f = contentFile(sourceId);
+    if (!f.exists) return null;
+    const txt = await f.text();
+    return txt ? (JSON.parse(txt) as LoadedContent) : null;
+  } catch {
+    return null;
+  }
 }
 
-/** Remove every cached content blob (used by the "clear cache" setting). */
+export async function removeContentCache(sourceId: string) {
+  try {
+    const f = contentFile(sourceId);
+    if (f.exists) f.delete();
+  } catch {}
+}
+
 export async function clearAllContentCache() {
-  const keys = await AsyncStorage.getAllKeys();
-  const targets = keys.filter((k) => k.startsWith('bs.content.'));
-  if (targets.length) await AsyncStorage.multiRemove(targets);
+  try {
+    const dir = new Directory(Paths.document);
+    for (const item of dir.list()) {
+      if (item.name.startsWith(CONTENT_PREFIX)) {
+        try {
+          item.delete();
+        } catch {}
+      }
+    }
+  } catch {}
 }
