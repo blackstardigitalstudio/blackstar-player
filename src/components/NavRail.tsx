@@ -3,21 +3,23 @@ import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { useT } from '@/i18n';
 import { colors, font, radius, spacing } from '@/theme/tokens';
 import { Txt } from './ui';
 
 const ITEMS = [
-  { key: 'home', label: 'Home', icon: 'home', path: '/(tabs)/home' },
-  { key: 'live', label: 'Live TV', icon: 'tv', path: '/(tabs)/live' },
-  { key: 'movies', label: 'Film', icon: 'film', path: '/(tabs)/movies' },
-  { key: 'series', label: 'Serie TV', icon: 'albums', path: '/(tabs)/series' },
-  { key: 'search', label: 'Cerca', icon: 'search', path: '/(tabs)/search' },
-  { key: 'settings', label: 'Impostazioni', icon: 'settings', path: '/(tabs)/settings' },
+  { key: 'home', icon: 'home', path: '/(tabs)/home' },
+  { key: 'live', icon: 'tv', path: '/(tabs)/live' },
+  { key: 'movies', icon: 'film', path: '/(tabs)/movies' },
+  { key: 'series', icon: 'albums', path: '/(tabs)/series' },
+  { key: 'search', icon: 'search', path: '/(tabs)/search' },
+  { key: 'settings', icon: 'settings', path: '/(tabs)/settings' },
 ] as const;
 
 export function NavRail() {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <View style={styles.rail}>
@@ -48,7 +50,7 @@ export function NavRail() {
                     fontWeight: active ? font.weightBold : font.weightReg,
                   }}
                 >
-                  {it.label}
+                  {t(`nav.${it.key}`)}
                 </Txt>
               </View>
             )}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { useT } from '@/i18n';
 import { colors, radius, spacing } from '@/theme/tokens';
 import type { Category, MediaItem, MediaKind } from '@/lib/types';
 import { MediaGrid } from './Rail';
@@ -33,6 +34,7 @@ export function Browser({
   onSelect: (item: MediaItem) => void;
   variant: 'poster' | 'tile';
 }) {
+  const t = useT();
   const cats = useMemo(() => categories.filter((c) => c.kind === kind), [categories, kind]);
   const [sel, setSel] = useState<string>('all');
 
@@ -42,7 +44,7 @@ export function Browser({
   );
 
   if (!items.length) {
-    return <Empty title={`Nessun contenuto in ${title}`} hint="Aggiorna la lista o cambia profilo dalle Impostazioni." />;
+    return <Empty title={t('br.empty', { title })} hint={t('br.emptyHint')} />;
   }
 
   const header = (
@@ -57,7 +59,7 @@ export function Browser({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}
         >
-          <Chip label="Tutti" active={sel === 'all'} onPress={() => setSel('all')} />
+          <Chip label={t('common.all')} active={sel === 'all'} onPress={() => setSel('all')} />
           {cats.map((c) => (
             <Chip key={c.id} label={c.name} active={sel === c.id} onPress={() => setSel(c.id)} />
           ))}

@@ -7,6 +7,7 @@ import { Focusable } from '@/tv/Focusable';
 import { useStore } from '@/store/useStore';
 import { parseM3U } from '@/lib/m3u';
 import { loadXtreamFailover } from '@/lib/xtream';
+import { useT } from '@/i18n';
 import type { SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -15,6 +16,7 @@ const MAX_DNS = 5;
 
 export default function Onboarding() {
   const router = useRouter();
+  const t = useT();
   const addSource = useStore((s) => s.addSource);
   const liveExt = useStore((s) => s.settings.liveExt);
 
@@ -37,17 +39,17 @@ export default function Onboarding() {
     try {
       const id = `src_${Date.now()}`;
       if (mode === 'm3u') {
-        if (!m3uUrl.trim()) throw new Error('Inserisci l’URL della lista M3U.');
+        if (!m3uUrl.trim()) throw new Error(t('ob.errM3uUrl'));
         const res = await fetch(m3uUrl.trim(), { headers: { 'User-Agent': 'BlackstarPlayer' } });
-        if (!res.ok) throw new Error(`Errore caricamento lista (HTTP ${res.status}).`);
+        if (!res.ok) throw new Error(t('ob.errHttp', { code: res.status }));
         const content = parseM3U(await res.text());
         if (!content.live.length && !content.movies.length && !content.series.length) {
-          throw new Error('Nessun canale trovato nella lista.');
+          throw new Error(t('ob.errEmpty'));
         }
         const src: SourceConfig = {
           id,
           type: 'm3u',
-          name: name.trim() || 'Lista M3U',
+          name: name.trim() || t('ob.m3uDefault'),
           m3uUrl: m3uUrl.trim(),
           createdAt: Date.now(),
         };
@@ -55,7 +57,7 @@ export default function Onboarding() {
       } else {
         const cleanHosts = hosts.map((h) => h.trim()).filter(Boolean);
         if (!cleanHosts.length || !username.trim() || !password.trim()) {
-          throw new Error('Compila almeno un DNS server, username e password.');
+          throw new Error(t('ob.errXtreamFields'));
         }
         const src: SourceConfig = {
           id,
@@ -68,13 +70,17 @@ export default function Onboarding() {
           createdAt: Date.now(),
         };
         // Tries each DNS in order until one authenticates and loads.
-        const { content, host } = await loadXtreamFailover(src, liveExt);
-        src.host = host;
-        await addSource(src, content);
+        try {
+          const { content, host } = await loadXtreamFailover(src, liveExt);
+          src.host = host;
+          await addSource(src, content);
+        } catch {
+          throw new Error(t('ob.errGeneric'));
+        }
       }
       router.replace('/(tabs)/home');
     } catch (e: any) {
-      setError(e?.message || 'Accesso non riuscito.');
+      setError(e?.message || t('ob.errGeneric'));
     } finally {
       setBusy(false);
     }
@@ -85,20 +91,20 @@ export default function Onboarding() {
       <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
         <BrandMark size={34} />
         <Txt variant="small" style={{ marginTop: 4, marginBottom: spacing.lg }}>
-          Player IPTV — veloce, ottimizzato per la TV. Made in Italy.
+          {t('ob.tagline')}
         </Txt>
 
         <View style={styles.tabs}>
-          <ModeChip label="Xtream (DNS)" icon="key" active={mode === 'xtream'} onPress={() => setMode('xtream')} />
-          <ModeChip label="Lista M3U / URL" icon="link" active={mode === 'm3u'} onPress={() => setMode('m3u')} />
+          <ModeChip label={t('ob.xtream')} icon="key" active={mode === 'xtream'} onPress={() => setMode('xtream')} />
+          <ModeChip label={t('ob.m3u')} icon="link" active={mode === 'm3u'} onPress={() => setMode('m3u')} />
         </View>
 
         <View style={styles.card}>
-          <Field label="Nome profilo (opzionale)" value={name} onChangeText={setName} placeholder="Es. Casa" autoCapitalize="sentences" />
+          <Field label={t('ob.profileName')} value={name} onChangeText={setName} placeholder={t('ob.profilePh')} autoCapitalize="sentences" />
 
           {mode === 'm3u' ? (
             <Field
-              label="URL lista M3U"
+              label={t('ob.m3uUrl')}
               value={m3uUrl}
               onChangeText={setM3uUrl}
               placeholder="http://provider/get.php?...type=m3u_plus"
@@ -106,18 +112,18 @@ export default function Onboarding() {
             />
           ) : (
             <>
-              <Field label="Username" value={username} onChangeText={setUsername} placeholder="Il tuo username" />
-              <Field label="Password" value={password} onChangeText={setPassword} placeholder="La tua password" secureTextEntry />
+              <Field label={t('ob.username')} value={username} onChangeText={setUsername} placeholder={t('ob.usernamePh')} />
+              <Field label={t('ob.password')} value={password} onChangeText={setPassword} placeholder={t('ob.passwordPh')} secureTextEntry />
 
               <View style={{ gap: spacing.sm }}>
-                <Txt variant="small">DNS server (con failover automatico)</Txt>
+                <Txt variant="small">{t('ob.dnsTitle')}</Txt>
                 {hosts.map((h, i) => (
                   <View key={i} style={styles.dnsRow}>
                     <View style={{ flex: 1 }}>
                       <Field
-                        label={i === 0 ? 'DNS principale' : `DNS alternativo ${i}`}
+                        label={i === 0 ? t('ob.dnsMain') : t('ob.dnsAlt', { n: i })}
                         value={h}
-                        onChangeText={(t) => setHostAt(i, t)}
+                        onChangeText={(val) => setHostAt(i, val)}
                         placeholder="http://dns.server:8080"
                         keyboardType="url"
                       />
@@ -130,9 +136,9 @@ export default function Onboarding() {
                   </View>
                 ))}
                 {hosts.length < MAX_DNS ? (
-                  <GhostButton label="Aggiungi un altro DNS" icon="add" onPress={addHost} />
+                  <GhostButton label={t('ob.addDns')} icon="add" onPress={addHost} />
                 ) : null}
-                <Txt variant="tiny">Se un DNS non risponde, l’app passa automaticamente al successivo.</Txt>
+                <Txt variant="tiny">{t('ob.dnsHint')}</Txt>
               </View>
             </>
           )}
@@ -147,13 +153,12 @@ export default function Onboarding() {
           ) : null}
 
           <View style={{ marginTop: spacing.sm }}>
-            <PrimaryButton label={busy ? 'Connessione…' : 'Accedi'} icon="log-in" onPress={busy ? () => {} : submit} autoFocus />
+            <PrimaryButton label={busy ? t('ob.connecting') : t('ob.login')} icon="log-in" onPress={busy ? () => {} : submit} autoFocus />
           </View>
         </View>
 
         <Txt variant="tiny" style={{ marginTop: spacing.lg, maxWidth: 520 }}>
-          Blackstar Player non fornisce contenuti né server: usa solo la lista o l’abbonamento che inserisci tu. Nessun
-          dato lascia il dispositivo.
+          {t('ob.disclaimer')}
         </Txt>
       </ScrollView>
     </Screen>

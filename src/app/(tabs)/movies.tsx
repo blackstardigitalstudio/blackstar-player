@@ -1,21 +1,22 @@
-import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { Browser } from '@/components/Browser';
 import { useStore } from '@/store/useStore';
-import { openItem } from '@/lib/nav';
+import { usePlayback } from '@/lib/playback';
+import { useT } from '@/i18n';
 
 export default function Movies() {
-  const router = useRouter();
+  const t = useT();
+  const play = usePlayback();
   const content = useStore((s) => s.content);
   return (
     <View style={{ flex: 1 }}>
       <Browser
-        title="Film"
+        title={t('title.movies')}
         items={content.movies}
         categories={content.categories}
         kind="movie"
         variant="poster"
-        onSelect={(i) => openItem(router, i)}
+        onSelect={(i) => play.open(i)}
       />
     </View>
   );

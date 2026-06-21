@@ -58,7 +58,8 @@
         }
       ],
       "./plugins/withTVRemote",
-      "./plugins/withAndroidTV"
+      "./plugins/withAndroidTV",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

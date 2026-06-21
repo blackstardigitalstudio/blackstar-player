@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { getLocales } from 'expo-localization';
+import type { Lang } from '@/i18n/strings';
 import { parseM3U } from '@/lib/m3u';
 import { loadXtream, loadXtreamFailover } from '@/lib/xtream';
 import {
@@ -12,7 +14,10 @@ import {
 } from '@/lib/storage';
 import type { LoadedContent, MediaItem, ProgressEntry, SourceConfig } from '@/lib/types';
 
+export type PlayerMode = 'internal' | 'ask' | 'mxplayer' | 'vlc';
+
 export interface Settings {
+  language: Lang;
   liveExt: 'ts' | 'm3u8';
   autoStartLastChannel: boolean;
   survivalMode: boolean;
@@ -21,9 +26,19 @@ export interface Settings {
   bannerText: string;
   autoCleanupHours: number;
   confirmExit: boolean;
+  playerMode: PlayerMode;
+}
+
+function deviceLang(): Lang {
+  try {
+    return getLocales()[0]?.languageCode === 'es' ? 'es' : 'it';
+  } catch {
+    return 'it';
+  }
 }
 
 const DEFAULT_SETTINGS: Settings = {
+  language: deviceLang(),
   liveExt: 'ts',
   autoStartLastChannel: true,
   survivalMode: true,
@@ -32,6 +47,7 @@ const DEFAULT_SETTINGS: Settings = {
   bannerText: 'Blackstar Player',
   autoCleanupHours: 6,
   confirmExit: true,
+  playerMode: 'internal',
 };
 
 const EMPTY: LoadedContent = { live: [], movies: [], series: [], categories: [], loadedAt: 0 };

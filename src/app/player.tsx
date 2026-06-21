@@ -9,6 +9,7 @@ import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
 import { rebuildLiveUrl } from '@/lib/xtream';
+import { useT } from '@/i18n';
 import type { MediaItem, SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -36,6 +37,7 @@ interface Current {
 export default function Player() {
   useKeepAwake();
   const router = useRouter();
+  const t = useT();
   const params = useLocalSearchParams<{ id?: string; url?: string; title?: string; key?: string; poster?: string; resumeAt?: string }>();
   const content = useStore((s) => s.content);
   const sources = useStore((s) => s.sources);
@@ -51,7 +53,7 @@ export default function Player() {
 
   const initial = useMemo<Current>(() => {
     if (params.url) {
-      return { title: params.title || 'Riproduzione', candidates: [params.url], isLive: false, liveIndex: -1 };
+      return { title: params.title || t('pl.title'), candidates: [params.url], isLive: false, liveIndex: -1 };
     }
     const live = content.live.findIndex((x) => x.id === params.id);
     if (live >= 0) {
@@ -60,7 +62,7 @@ export default function Player() {
     }
     const movie = content.movies.find((x) => x.id === params.id);
     if (movie) return { title: movie.name, candidates: movie.url ? [movie.url] : [], isLive: false, liveIndex: -1, item: movie };
-    return { title: 'Riproduzione', candidates: [], isLive: false, liveIndex: -1 };
+    return { title: t('pl.title'), candidates: [], isLive: false, liveIndex: -1 };
   }, [params.id, params.url, params.title, content, source, settings.liveExt]);
 
   const [cur, setCur] = useState<Current>(initial);
@@ -134,7 +136,7 @@ export default function Player() {
           player.replace(buildSource(cur.candidates[next]));
         } else {
           setBuffering(false);
-          setError(err?.message || 'Canale non disponibile.');
+          setError(err?.message || t('pl.unavailable'));
         }
       }
     });
@@ -240,7 +242,7 @@ export default function Player() {
         <View style={styles.center} pointerEvents="none">
           <ActivityIndicator size="large" color={colors.accent} />
           <Txt variant="small" style={{ marginTop: spacing.sm }}>
-            Caricamento…
+            {t('common.loading')}
           </Txt>
         </View>
       ) : null}
@@ -252,8 +254,8 @@ export default function Player() {
             {error}
           </Txt>
           <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
-            <CtrlButton icon="refresh" label="Riprova" autoFocus onPress={() => switchTo({ ...cur })} />
-            <CtrlButton icon="arrow-back" label="Indietro" onPress={() => router.back()} />
+            <CtrlButton icon="refresh" label={t('common.retry')} autoFocus onPress={() => switchTo({ ...cur })} />
+            <CtrlButton icon="arrow-back" label={t('common.back')} onPress={() => router.back()} />
           </View>
         </View>
       ) : null}
@@ -268,20 +270,20 @@ export default function Player() {
               <View style={styles.liveBadge}>
                 <View style={styles.liveDot} />
                 <Txt variant="tiny" color={colors.text}>
-                  LIVE
+                  {t('pl.live')}
                 </Txt>
               </View>
             ) : null}
           </View>
 
           <View style={styles.controls} pointerEvents="box-none">
-            <CtrlButton icon="arrow-back" label="Indietro" onPress={() => router.back()} />
-            {cur.isLive ? <CtrlButton icon="play-skip-back" label="Prec." onPress={() => zap(-1)} /> : null}
-            <CtrlButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pausa' : 'Play'} autoFocus onPress={togglePlay} />
-            {cur.isLive ? <CtrlButton icon="play-skip-forward" label="Succ." onPress={() => zap(1)} /> : null}
+            <CtrlButton icon="arrow-back" label={t('common.back')} onPress={() => router.back()} />
+            {cur.isLive ? <CtrlButton icon="play-skip-back" label={t('pl.prev')} onPress={() => zap(-1)} /> : null}
+            <CtrlButton icon={playing ? 'pause' : 'play'} label={playing ? t('pl.pause') : t('pl.play')} autoFocus onPress={togglePlay} />
+            {cur.isLive ? <CtrlButton icon="play-skip-forward" label={t('pl.next')} onPress={() => zap(1)} /> : null}
             <CtrlButton
               icon="resize"
-              label="Formato"
+              label={t('pl.format')}
               onPress={() =>
                 useStore.getState().updateSettings({
                   aspectMode: settings.aspectMode === 'contain' ? 'cover' : settings.aspectMode === 'cover' ? 'fill' : 'contain',
@@ -291,7 +293,7 @@ export default function Player() {
             {cur.item ? (
               <CtrlButton
                 icon={fav ? 'heart' : 'heart-outline'}
-                label="Preferito"
+                label={t('pl.favorite')}
                 onPress={() => cur.item && toggleFavorite(cur.item)}
               />
             ) : null}

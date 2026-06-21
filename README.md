@@ -21,7 +21,11 @@ Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
 - **Continua a guardare**: film ed episodi ricordano il **punto esatto** (salvato in locale) e
   riprendono da lì; barra di avanzamento in Home e sugli episodi
 - **Ricerca intelligente**: suggerimenti automatici mentre scrivi **+ titoli correlati / consigliati**
+  (ricerca con debounce, ottimizzata per **liste molto pesanti**)
 - **Home con consigli** ("Continua a guardare", "Consigliati per te", "Preferiti")
+- **Bilingue Italiano / Español**: tutta l'interfaccia si converte; lingua iniziale dal dispositivo,
+  cambiabile dalle Impostazioni
+- **Riproduttore selezionabile**: interno, **MX Player**, **VLC** o "chiedi sempre" (player esterno via intent)
 - **Zapping con barra numerica**: digita il numero del canale per saltarci direttamente
 - **Modalità sopravvivenza**: ritenta automaticamente formati/stream alternativi se un canale cade
 - **Player** con play/pausa, formato immagine (Adatta/Riempi/Estendi), preferiti e cambio canale Live

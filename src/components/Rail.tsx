@@ -26,6 +26,7 @@ export function Rail({
   variant?: Variant;
 }) {
   if (!items.length) return null;
+  const itemW = (variant === 'poster' ? POSTER_W : TILE_W) + spacing.md;
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <Txt variant="h3" style={{ marginLeft: spacing.lg, marginBottom: spacing.sm }}>
@@ -38,8 +39,10 @@ export function Rail({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
         initialNumToRender={8}
+        maxToRenderPerBatch={8}
         windowSize={5}
         removeClippedSubviews
+        getItemLayout={(_, index) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
         renderItem={({ item }) => (
           <Focusable onSelect={() => onSelect(item)} focusStyle={EMPTY}>
             {(f) => <CardFor item={item} focused={f} variant={variant} />}
@@ -78,6 +81,8 @@ export function MediaGrid({
       columnWrapperStyle={cols > 1 ? { gap: spacing.md, paddingHorizontal: spacing.lg } : undefined}
       contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xxl }}
       initialNumToRender={cols * 3}
+      maxToRenderPerBatch={cols * 3}
+      updateCellsBatchingPeriod={40}
       windowSize={7}
       removeClippedSubviews
       renderItem={({ item }) => (

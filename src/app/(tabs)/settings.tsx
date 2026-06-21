@@ -3,7 +3,8 @@ import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
-import { useStore } from '@/store/useStore';
+import { useStore, type PlayerMode } from '@/store/useStore';
+import { useT } from '@/i18n';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 function Row({
@@ -51,46 +52,61 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const ASPECT_LABEL: Record<string, string> = { contain: 'Adatta', cover: 'Riempi', fill: 'Estendi' };
+const PLAYER_ORDER: PlayerMode[] = ['internal', 'ask', 'mxplayer', 'vlc'];
 
 export default function Settings() {
   const router = useRouter();
+  const t = useT();
   const s = useStore();
   const active = s.sources.find((x) => x.id === s.activeId);
+
+  const aspectLabel = { contain: t('set.aspectContain'), cover: t('set.aspectCover'), fill: t('set.aspectFill') }[s.settings.aspectMode];
+  const playerLabel = (m: PlayerMode) =>
+    m === 'internal' ? t('player.internal') : m === 'ask' ? t('player.ask') : m === 'mxplayer' ? 'MX Player' : 'VLC';
+  const nextPlayer = () => {
+    const i = PLAYER_ORDER.indexOf(s.settings.playerMode);
+    return PLAYER_ORDER[(i + 1) % PLAYER_ORDER.length];
+  };
 
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
       <Txt variant="h2" style={{ marginBottom: spacing.md }}>
-        Impostazioni
+        {t('set.title')}
       </Txt>
 
-      <Section title="Profili">
+      <Section title={t('set.secProfiles')}>
         {s.sources.map((src) => (
           <Row
             key={src.id}
             icon={src.id === s.activeId ? 'radio-button-on' : 'radio-button-off'}
             label={`${src.name}  ·  ${src.type === 'xtream' ? 'Xtream' : 'M3U'}`}
-            value={src.id === s.activeId ? 'Attivo' : 'Attiva'}
+            value={src.id === s.activeId ? t('set.active') : t('set.activate')}
             onPress={() => s.setActive(src.id)}
           />
         ))}
-        <Row icon="add-circle" label="Aggiungi profilo / playlist" onPress={() => router.push('/onboarding')} />
+        <Row icon="add-circle" label={t('set.addProfile')} onPress={() => router.push('/onboarding')} />
         {active ? (
-          <Row icon="trash" label={`Rimuovi “${active.name}”`} danger onPress={() => s.removeSource(active.id)} />
+          <Row icon="trash" label={t('set.removeProfile', { name: active.name })} danger onPress={() => s.removeSource(active.id)} />
         ) : null}
       </Section>
 
-      <Section title="Lista">
-        <Row icon="refresh" label="Aggiorna lista ora" onPress={() => s.refresh(true)} />
-        <Row icon="time" label="Aggiornamento automatico" value={`${s.settings.autoCleanupHours} h`} onPress={() => s.updateSettings({ autoCleanupHours: s.settings.autoCleanupHours >= 24 ? 3 : s.settings.autoCleanupHours + 3 })} />
-        <Row icon="trash-bin" label="Svuota cache contenuti" onPress={() => s.clearCache()} />
+      <Section title={t('set.secList')}>
+        <Row icon="refresh" label={t('set.refreshNow')} onPress={() => s.refresh(true)} />
+        <Row
+          icon="time"
+          label={t('set.autoUpdate')}
+          value={`${s.settings.autoCleanupHours} h`}
+          onPress={() => s.updateSettings({ autoCleanupHours: s.settings.autoCleanupHours >= 24 ? 3 : s.settings.autoCleanupHours + 3 })}
+        />
+        <Row icon="trash-bin" label={t('set.clearCache')} onPress={() => s.clearCache()} />
       </Section>
 
-      <Section title="Riproduzione">
+      <Section title={t('set.secPlayback')}>
+        <Row icon="play-circle" label={t('set.player')} value={playerLabel(s.settings.playerMode)} onPress={() => s.updateSettings({ playerMode: nextPlayer() })} />
         <Row
           icon="resize"
-          label="Formato immagine"
-          value={ASPECT_LABEL[s.settings.aspectMode]}
+          label={t('set.aspect')}
+          value={aspectLabel}
           onPress={() =>
             s.updateSettings({
               aspectMode: s.settings.aspectMode === 'contain' ? 'cover' : s.settings.aspectMode === 'cover' ? 'fill' : 'contain',
@@ -99,55 +115,54 @@ export default function Settings() {
         />
         <Row
           icon="cellular"
-          label="Formato stream Live"
+          label={t('set.liveFormat')}
           value={s.settings.liveExt.toUpperCase()}
           onPress={() => s.updateSettings({ liveExt: s.settings.liveExt === 'ts' ? 'm3u8' : 'ts' })}
         />
         <Row
           icon="shield-checkmark"
-          label="Modalità sopravvivenza (auto-retry)"
-          value={s.settings.survivalMode ? 'ON' : 'OFF'}
+          label={t('set.survival')}
+          value={s.settings.survivalMode ? t('common.on') : t('common.off')}
           onPress={() => s.updateSettings({ survivalMode: !s.settings.survivalMode })}
         />
         <Row
           icon="play-skip-forward"
-          label="Avvia ultimo canale all’apertura"
-          value={s.settings.autoStartLastChannel ? 'ON' : 'OFF'}
+          label={t('set.autostart')}
+          value={s.settings.autoStartLastChannel ? t('common.on') : t('common.off')}
           onPress={() => s.updateSettings({ autoStartLastChannel: !s.settings.autoStartLastChannel })}
         />
       </Section>
 
-      <Section title="Interfaccia">
+      <Section title={t('set.secInterface')}>
+        <Row
+          icon="language"
+          label={t('set.language')}
+          value={s.settings.language === 'it' ? 'Italiano' : 'Español'}
+          onPress={() => s.updateSettings({ language: s.settings.language === 'it' ? 'es' : 'it' })}
+        />
         <Row
           icon="keypad"
-          label="Mostra numeri canale (zapping)"
-          value={s.settings.showChannelNumbers ? 'ON' : 'OFF'}
+          label={t('set.showNumbers')}
+          value={s.settings.showChannelNumbers ? t('common.on') : t('common.off')}
           onPress={() => s.updateSettings({ showChannelNumbers: !s.settings.showChannelNumbers })}
         />
         <Row
           icon="exit"
-          label="Conferma prima di uscire"
-          value={s.settings.confirmExit ? 'ON' : 'OFF'}
+          label={t('set.confirmExit')}
+          value={s.settings.confirmExit ? t('common.on') : t('common.off')}
           onPress={() => s.updateSettings({ confirmExit: !s.settings.confirmExit })}
         />
       </Section>
 
-      <Section title="Cronologia">
-        <Row
-          icon="play-skip-forward"
-          label={`Svuota “Continua a guardare” (${Object.keys(s.progress).length})`}
-          danger
-          onPress={() => s.clearProgress()}
-        />
-        <Row icon="time-outline" label={`Cancella cronologia (${s.recents.length})`} danger onPress={() => s.clearRecents()} />
+      <Section title={t('set.secHistory')}>
+        <Row icon="play-skip-forward" label={t('set.clearContinue', { n: Object.keys(s.progress).length })} danger onPress={() => s.clearProgress()} />
+        <Row icon="time-outline" label={t('set.clearHistory', { n: s.recents.length })} danger onPress={() => s.clearRecents()} />
       </Section>
 
-      <Section title="Info">
+      <Section title={t('set.secInfo')}>
         <Row icon="star" label="Blackstar Player" value="v1.0.0" onPress={() => {}} />
         <View style={{ padding: spacing.md }}>
-          <Txt variant="tiny">
-            Blackstar Digital Studio · Made in Italy 🇮🇹{'\n'}Nessun server esterno, nessun account, nessuna pubblicità.
-          </Txt>
+          <Txt variant="tiny">{t('set.infoText')}</Txt>
         </View>
       </Section>
     </ScrollView>

@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { ContinueRail } from '@/components/ContinueRail';
@@ -7,13 +6,15 @@ import { Rail } from '@/components/Rail';
 import { Empty, GhostButton, Spinner, Txt } from '@/components/ui';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
-import { openItem, playUrl } from '@/lib/nav';
+import { usePlayback } from '@/lib/playback';
 import { recommendFromRecents } from '@/lib/search';
+import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 export default function Home() {
-  const router = useRouter();
+  const t = useT();
+  const play = usePlayback();
   const content = useStore((s) => s.content);
   const loading = useStore((s) => s.loading);
   const error = useStore((s) => s.error);
@@ -33,7 +34,6 @@ export default function Home() {
     [progress],
   );
 
-  // Number-bar zapping: type a channel number to jump straight to it.
   const [typed, setTyped] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,9 +42,9 @@ export default function Home() {
       const n = Number(num);
       const ch = content.live.find((c) => c.number === n);
       setTyped('');
-      if (ch) openItem(router, ch);
+      if (ch) play.open(ch);
     },
-    [content.live, router],
+    [content.live, play],
   );
 
   useKeyHandler(
@@ -67,46 +67,46 @@ export default function Home() {
     [typed, jumpToNumber],
   );
 
-  const go = (item: MediaItem) => openItem(router, item);
+  const go = (item: MediaItem) => play.open(item);
   const hasAny = content.live.length + content.movies.length + content.series.length > 0;
 
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.header}>
         <View>
-          <Txt variant="h2">Ciao 👋</Txt>
-          <Txt variant="small">{activeName ? `Profilo attivo: ${activeName}` : 'Nessun profilo'}</Txt>
+          <Txt variant="h2">{t('home.hi')}</Txt>
+          <Txt variant="small">{activeName ? t('home.activeProfile', { name: activeName }) : t('home.noProfile')}</Txt>
         </View>
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           {showNumbers && content.live.length > 0 ? (
             <View style={styles.hint}>
               <Ionicons name="keypad" size={16} color={colors.textMuted} />
-              <Txt variant="tiny">Digita il numero del canale</Txt>
+              <Txt variant="tiny">{t('home.zapHint')}</Txt>
             </View>
           ) : null}
-          <GhostButton label="Aggiorna" icon="refresh" onPress={() => refresh(true)} />
+          <GhostButton label={t('common.refresh')} icon="refresh" onPress={() => refresh(true)} />
         </View>
       </View>
 
       {loading && !hasAny ? (
-        <Spinner label="Caricamento lista in corso…" />
+        <Spinner label={t('home.loadingList')} />
       ) : !hasAny ? (
         <Empty
           icon="cloud-offline-outline"
-          title={error ? 'Impossibile caricare la lista' : 'Lista vuota'}
-          hint={error ?? 'Prova ad aggiornare o aggiungi una playlist dalle Impostazioni.'}
+          title={error ? t('home.cantLoad') : t('home.emptyList')}
+          hint={error ?? t('home.emptyHint')}
         />
       ) : (
         <ScrollView contentContainerStyle={{ paddingTop: spacing.sm, paddingBottom: spacing.xxl }}>
           <ContinueRail
             entries={continueList}
-            onSelect={(e) => playUrl(router, e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position })}
+            onSelect={(e) => play.playEntry(e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position })}
           />
-          <Rail title="Consigliati per te" items={recommended} onSelect={go} variant="poster" />
-          <Rail title="I tuoi preferiti" items={favorites} onSelect={go} variant="poster" />
-          <Rail title="Canali Live" items={content.live.slice(0, 24)} onSelect={go} variant="tile" />
-          <Rail title="Film" items={content.movies.slice(0, 24)} onSelect={go} variant="poster" />
-          <Rail title="Serie TV" items={content.series.slice(0, 24)} onSelect={go} variant="poster" />
+          <Rail title={t('home.recommended')} items={recommended} onSelect={go} variant="poster" />
+          <Rail title={t('home.favorites')} items={favorites} onSelect={go} variant="poster" />
+          <Rail title={t('home.liveChannels')} items={content.live.slice(0, 24)} onSelect={go} variant="tile" />
+          <Rail title={t('home.movies')} items={content.movies.slice(0, 24)} onSelect={go} variant="poster" />
+          <Rail title={t('home.series')} items={content.series.slice(0, 24)} onSelect={go} variant="poster" />
         </ScrollView>
       )}
 

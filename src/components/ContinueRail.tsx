@@ -3,20 +3,18 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { useT } from '@/i18n';
 import { colors, gradients, radius, spacing } from '@/theme/tokens';
 import type { ProgressEntry } from '@/lib/types';
 import { POSTER_W, POSTER_H } from './Card';
 import { Txt } from './ui';
 
-function pctLeft(e: ProgressEntry) {
-  if (!e.duration) return '';
-  const left = Math.max(0, e.duration - e.position);
-  const m = Math.round(left / 60);
-  return m > 0 ? `${m} min rimasti` : 'Quasi finito';
-}
-
 function Card({ entry, focused }: { entry: ProgressEntry; focused: boolean }) {
+  const t = useT();
   const pct = entry.duration > 0 ? Math.min(1, entry.position / entry.duration) : 0;
+  const left = Math.max(0, entry.duration - entry.position);
+  const mins = Math.round(left / 60);
+  const leftLabel = entry.duration ? (mins > 0 ? t('cont.minsLeft', { n: mins }) : t('cont.almostDone')) : '';
   return (
     <View style={{ width: POSTER_W }}>
       <View style={[styles.poster, focused && styles.focus]}>
@@ -39,17 +37,19 @@ function Card({ entry, focused }: { entry: ProgressEntry; focused: boolean }) {
       <Txt variant="small" numberOfLines={1} style={{ marginTop: 6, color: focused ? colors.text : colors.textMuted }}>
         {entry.title}
       </Txt>
-      <Txt variant="tiny">{pctLeft(entry)}</Txt>
+      <Txt variant="tiny">{leftLabel}</Txt>
     </View>
   );
 }
 
 export function ContinueRail({ entries, onSelect }: { entries: ProgressEntry[]; onSelect: (e: ProgressEntry) => void }) {
+  const t = useT();
   if (!entries.length) return null;
+  const itemW = POSTER_W + spacing.md;
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <Txt variant="h3" style={{ marginLeft: spacing.lg, marginBottom: spacing.sm }}>
-        Continua a guardare
+        {t('home.continue')}
       </Txt>
       <FlatList
         horizontal
@@ -57,6 +57,7 @@ export function ContinueRail({ entries, onSelect }: { entries: ProgressEntry[]; 
         keyExtractor={(e) => e.key}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
+        getItemLayout={(_, index) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
         renderItem={({ item }) => (
           <Focusable onSelect={() => onSelect(item)} focusStyle={{}}>
             {(f) => <Card entry={item} focused={f} />}

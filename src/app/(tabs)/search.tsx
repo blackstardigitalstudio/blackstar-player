@@ -1,28 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Rail } from '@/components/Rail';
 import { Empty, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { useStore } from '@/store/useStore';
-import { openItem } from '@/lib/nav';
-import { relatedItems, searchItems, suggestTitles } from '@/lib/search';
+import { usePlayback } from '@/lib/playback';
+import { normalize, relatedItems, searchItems } from '@/lib/search';
+import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
 import { colors, font, radius, spacing } from '@/theme/tokens';
 
 export default function Search() {
-  const router = useRouter();
+  const t = useT();
+  const play = usePlayback();
   const content = useStore((s) => s.content);
   const [q, setQ] = useState('');
+  const [dq, setDq] = useState(''); // debounced query — keeps typing smooth on huge lists
   const [focused, setFocused] = useState(false);
 
-  const pool = useMemo(() => [...content.movies, ...content.series, ...content.live], [content]);
-  const results = useMemo(() => searchItems(q, pool).map((r) => r.item), [q, pool]);
-  const suggestions = useMemo(() => suggestTitles(q, pool), [q, pool]);
-  const related = useMemo(() => (results[0] ? relatedItems(results[0], pool) : []), [results, pool]);
+  useEffect(() => {
+    const id = setTimeout(() => setDq(q), 220);
+    return () => clearTimeout(id);
+  }, [q]);
 
-  const go = (item: MediaItem) => openItem(router, item);
+  const pool = useMemo(() => [...content.movies, ...content.series, ...content.live], [content]);
+  const scored = useMemo(() => searchItems(dq, pool, 200), [dq, pool]);
+  const results = useMemo(() => scored.map((r) => r.item).slice(0, 60), [scored]);
+  const suggestions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const r of scored) {
+      const k = normalize(r.item.name);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(r.item.name);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }, [scored]);
+  const related = useMemo(() => (scored[0] ? relatedItems(scored[0].item, pool) : []), [scored, pool]);
+
+  const go = (item: MediaItem) => play.open(item);
   const ready = q.trim().length >= 2;
   const hasContent = pool.length > 0;
 
@@ -33,7 +52,7 @@ export default function Search() {
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Cerca film, serie o canali…"
+          placeholder={t('search.ph')}
           placeholderTextColor={colors.textFaint}
           autoCorrect={false}
           onFocus={() => setFocused(true)}
@@ -48,9 +67,9 @@ export default function Search() {
       </View>
 
       {!hasContent ? (
-        <Empty icon="albums-outline" title="Aggiungi una playlist per iniziare a cercare" />
+        <Empty icon="albums-outline" title={t('search.needPlaylist')} />
       ) : !ready ? (
-        <Empty icon="search-outline" title="Digita almeno 2 caratteri" hint="Suggerimenti e titoli correlati appariranno mentre scrivi." />
+        <Empty icon="search-outline" title={t('search.min2')} hint={t('search.min2Hint')} />
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
           {suggestions.length > 0 ? (
@@ -68,11 +87,11 @@ export default function Search() {
           ) : null}
 
           {results.length === 0 ? (
-            <Empty icon="sad-outline" title={`Nessun risultato per “${q}”`} />
+            <Empty icon="sad-outline" title={t('search.noResults', { q })} />
           ) : (
             <>
-              <Rail title={`Risultati (${results.length})`} items={results} onSelect={go} variant="poster" />
-              <Rail title="Titoli correlati" items={related} onSelect={go} variant="poster" />
+              <Rail title={t('search.results', { n: results.length })} items={results} onSelect={go} variant="poster" />
+              <Rail title={t('search.related')} items={related} onSelect={go} variant="poster" />
             </>
           )}
         </ScrollView>

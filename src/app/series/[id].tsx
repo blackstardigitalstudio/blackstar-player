@@ -8,13 +8,16 @@ import { Focusable } from '@/tv/Focusable';
 import { useStore } from '@/store/useStore';
 import { m3uEpisodes } from '@/lib/m3u';
 import { loadSeriesInfo } from '@/lib/xtream';
-import { playUrl } from '@/lib/nav';
+import { usePlayback } from '@/lib/playback';
+import { useT } from '@/i18n';
 import type { Season } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 export default function SeriesDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const t = useT();
+  const play = usePlayback();
   const content = useStore((s) => s.content);
   const sources = useStore((s) => s.sources);
   const activeId = useStore((s) => s.activeId);
@@ -61,7 +64,7 @@ export default function SeriesDetail() {
   if (!item) {
     return (
       <Screen>
-        <Empty title="Serie non trovata" />
+        <Empty title={t('sd.notFound')} />
       </Screen>
     );
   }
@@ -72,7 +75,7 @@ export default function SeriesDetail() {
     <Screen>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
         <View style={{ marginBottom: spacing.md }}>
-          <GhostButton label="Indietro" icon="arrow-back" onPress={() => router.back()} />
+          <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
         </View>
 
         <View style={styles.head}>
@@ -95,11 +98,11 @@ export default function SeriesDetail() {
         </View>
 
         {error ? (
-          <Empty title="Errore" hint={error} />
+          <Empty title={t('sd.error')} hint={error} />
         ) : !seasons ? (
-          <Spinner label="Caricamento episodi…" />
+          <Spinner label={t('sd.loadingEpisodes')} />
         ) : seasons.length === 0 ? (
-          <Empty title="Nessun episodio trovato" />
+          <Empty title={t('sd.noEpisodes')} />
         ) : (
           <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
@@ -107,7 +110,7 @@ export default function SeriesDetail() {
                 <Focusable key={s.season} onSelect={() => setSel(i)} style={[styles.chip, i === sel && styles.chipActive]} focusStyle={styles.chipFocus}>
                   {(f) => (
                     <Txt variant="small" color={i === sel || f ? colors.text : colors.textMuted}>
-                      Stagione {s.season}
+                      {t('sd.season', { n: s.season })}
                     </Txt>
                   )}
                 </Focusable>
@@ -121,7 +124,7 @@ export default function SeriesDetail() {
                   onSelect={() => {
                     addRecent({ ...item });
                     const key = `ep:${ep.id}`;
-                    playUrl(router, ep.url, `${item.name} · S${ep.season}E${ep.episode}`, {
+                    play.playEntry(ep.url, `${item.name} · S${ep.season}E${ep.episode}`, {
                       key,
                       poster: item.logo,
                       resumeAt: getProgress(key)?.position,
