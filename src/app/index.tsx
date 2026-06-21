@@ -7,6 +7,8 @@ import { colors } from '@/theme/tokens';
 export default function Index() {
   const hydrated = useStore((s) => s.hydrated);
   const hasSource = useStore((s) => s.sources.length > 0);
+  const multiProfile = useStore((s) => s.profiles.length > 1);
+  const profileChosen = useStore((s) => s.profileChosen);
 
   if (!hydrated) {
     return (
@@ -15,5 +17,7 @@ export default function Index() {
       </View>
     );
   }
-  return <Redirect href={hasSource ? '/(tabs)/home' : '/onboarding'} />;
+  if (!hasSource) return <Redirect href="/onboarding" />;
+  if (multiProfile && !profileChosen) return <Redirect href="/profiles" />;
+  return <Redirect href="/(tabs)/home" />;
 }

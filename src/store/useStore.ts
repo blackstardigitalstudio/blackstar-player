@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getLocales } from 'expo-localization';
 import type { Lang } from '@/i18n/strings';
 import { parseM3U } from '@/lib/m3u';
-import { loadXtream, loadXtreamFailover } from '@/lib/xtream';
+import { loadXtreamFailover } from '@/lib/xtream';
 import {
   KEYS,
   cacheContent,
@@ -12,7 +12,7 @@ import {
   removeContentCache,
   setJSON,
 } from '@/lib/storage';
-import type { LoadedContent, MediaItem, ProgressEntry, SourceConfig } from '@/lib/types';
+import type { LoadedContent, MediaItem, Profile, ProgressEntry, SourceConfig } from '@/lib/types';
 
 export type PlayerMode = 'internal' | 'ask' | 'mxplayer' | 'vlc';
 
@@ -54,6 +54,8 @@ const DEFAULT_SETTINGS: Settings = {
   pin: '',
 };
 
+export const PROFILE_COLORS = ['#A855F7', '#22D3EE', '#34D399', '#FBBF24', '#FB7185', '#60A5FA'];
+
 const EMPTY: LoadedContent = { live: [], movies: [], series: [], categories: [], loadedAt: 0 };
 
 interface State {
@@ -63,16 +65,27 @@ interface State {
   content: LoadedContent;
   loading: boolean;
   error: string | null;
+
+  profiles: Profile[];
+  activeProfileId: string | null;
   favorites: MediaItem[];
   recents: MediaItem[];
   progress: Record<string, ProgressEntry>;
+  taste: Record<string, number>;
+
   lastLiveId: string | null;
   settings: Settings;
-  /** Session-only unlock for parental-locked content (not persisted). */
   unlocked: boolean;
+  /** Whether the user picked a profile this session (for the startup picker). */
+  profileChosen: boolean;
 
   hydrate: () => Promise<void>;
   setUnlocked: (v: boolean) => void;
+
+  addProfile: (name: string, color?: string) => Promise<void>;
+  removeProfile: (id: string) => Promise<void>;
+  setActiveProfile: (id: string) => Promise<void>;
+
   addSource: (s: SourceConfig, content?: LoadedContent) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   setActive: (id: string) => Promise<void>;
@@ -90,6 +103,16 @@ interface State {
   clearProgress: () => Promise<void>;
 }
 
+async function loadProfileData(pid: string) {
+  const [favorites, recents, progress, taste] = await Promise.all([
+    getJSON<MediaItem[]>(KEYS.fav(pid), []),
+    getJSON<MediaItem[]>(KEYS.recents(pid), []),
+    getJSON<Record<string, ProgressEntry>>(KEYS.progress(pid), {}),
+    getJSON<Record<string, number>>(KEYS.taste(pid), {}),
+  ]);
+  return { favorites, recents, progress, taste };
+}
+
 export const useStore = create<State>((set, get) => ({
   hydrated: false,
   sources: [],
@@ -97,39 +120,86 @@ export const useStore = create<State>((set, get) => ({
   content: EMPTY,
   loading: false,
   error: null,
+
+  profiles: [],
+  activeProfileId: null,
   favorites: [],
   recents: [],
   progress: {},
+  taste: {},
+
   lastLiveId: null,
   settings: DEFAULT_SETTINGS,
   unlocked: false,
+  profileChosen: false,
 
   setUnlocked: (v) => set({ unlocked: v }),
 
   hydrate: async () => {
-    const [sources, activeId, favorites, recents, progress, settings] = await Promise.all([
+    const [sources, activeId, settings, profilesRaw, activeProfileRaw] = await Promise.all([
       getJSON<SourceConfig[]>(KEYS.sources, []),
       getJSON<string | null>(KEYS.activeSource, null),
-      getJSON<MediaItem[]>(KEYS.favorites, []),
-      getJSON<MediaItem[]>(KEYS.recents, []),
-      getJSON<Record<string, ProgressEntry>>(KEYS.progress, {}),
       getJSON<Settings>(KEYS.settings, DEFAULT_SETTINGS),
+      getJSON<Profile[]>(KEYS.profiles, []),
+      getJSON<string | null>(KEYS.activeProfile, null),
     ]);
+
+    // Ensure at least one profile exists.
+    let profiles = profilesRaw;
+    if (profiles.length === 0) {
+      profiles = [{ id: `p_${Date.now()}`, name: 'Profilo 1', color: PROFILE_COLORS[0], createdAt: Date.now() }];
+      await setJSON(KEYS.profiles, profiles);
+    }
+    const activeProfileId = activeProfileRaw && profiles.find((p) => p.id === activeProfileRaw) ? activeProfileRaw : profiles[0].id;
+    await setJSON(KEYS.activeProfile, activeProfileId);
+
+    const data = await loadProfileData(activeProfileId);
     const active = activeId && sources.find((s) => s.id === activeId) ? activeId : sources[0]?.id ?? null;
+
     set({
       sources,
       activeId: active,
-      favorites,
-      recents,
-      progress,
       settings: { ...DEFAULT_SETTINGS, ...settings },
+      profiles,
+      activeProfileId,
+      ...data,
       hydrated: true,
     });
+
     if (active) {
       const cached = await loadCachedContent(active);
       if (cached) set({ content: cached });
       get().refresh(false);
     }
+  },
+
+  addProfile: async (name, color) => {
+    const profile: Profile = {
+      id: `p_${Date.now()}`,
+      name: name.trim() || `Profilo ${get().profiles.length + 1}`,
+      color: color || PROFILE_COLORS[get().profiles.length % PROFILE_COLORS.length],
+      createdAt: Date.now(),
+    };
+    const profiles = [...get().profiles, profile];
+    await setJSON(KEYS.profiles, profiles);
+    set({ profiles });
+    await get().setActiveProfile(profile.id);
+  },
+
+  removeProfile: async (id) => {
+    let profiles = get().profiles.filter((p) => p.id !== id);
+    if (profiles.length === 0) {
+      profiles = [{ id: `p_${Date.now()}`, name: 'Profilo 1', color: PROFILE_COLORS[0], createdAt: Date.now() }];
+    }
+    await setJSON(KEYS.profiles, profiles);
+    set({ profiles });
+    if (get().activeProfileId === id) await get().setActiveProfile(profiles[0].id);
+  },
+
+  setActiveProfile: async (id) => {
+    await setJSON(KEYS.activeProfile, id);
+    const data = await loadProfileData(id);
+    set({ activeProfileId: id, profileChosen: true, ...data });
   },
 
   addSource: async (s, content) => {
@@ -165,7 +235,6 @@ export const useStore = create<State>((set, get) => ({
     if (!activeId) return;
     const src = sources.find((s) => s.id === activeId);
     if (!src) return;
-    // skip network if cache is fresh enough and not forced
     const ageMs = Date.now() - content.loadedAt;
     if (!force && content.loadedAt && ageMs < settings.autoCleanupHours * 3600_000) return;
     set({ loading: true, error: null });
@@ -176,9 +245,8 @@ export const useStore = create<State>((set, get) => ({
         if (!res.ok) throw new Error(`Errore caricamento lista (HTTP ${res.status})`);
         loaded = parseM3U(await res.text());
       } else {
-        // try each DNS host until one works (failover)
-        const { content, host } = await loadXtreamFailover(src, settings.liveExt);
-        loaded = content;
+        const { content: c, host } = await loadXtreamFailover(src, settings.liveExt);
+        loaded = c;
         if (host && host !== src.host) {
           const updated = get().sources.map((s) => (s.id === src.id ? { ...s, host } : s));
           await setJSON(KEYS.sources, updated);
@@ -193,20 +261,31 @@ export const useStore = create<State>((set, get) => ({
   },
 
   toggleFavorite: async (item) => {
+    const pid = get().activeProfileId;
+    if (!pid) return;
     const exists = get().favorites.some((f) => f.id === item.id);
     const favorites = exists
       ? get().favorites.filter((f) => f.id !== item.id)
       : [{ ...item, _eps: undefined } as MediaItem, ...get().favorites];
     set({ favorites });
-    await setJSON(KEYS.favorites, favorites);
+    await setJSON(KEYS.fav(pid), favorites);
   },
 
   isFavorite: (id) => get().favorites.some((f) => f.id === id),
 
   addRecent: async (item) => {
+    const pid = get().activeProfileId;
+    if (!pid) return;
     const recents = [item, ...get().recents.filter((r) => r.id !== item.id)].slice(0, 40);
     set({ recents });
-    await setJSON(KEYS.recents, recents);
+    await setJSON(KEYS.recents(pid), recents);
+    // learn taste from the item's category/genre
+    const cat = item.categoryName || item.group;
+    if (cat) {
+      const taste = { ...get().taste, [cat]: (get().taste[cat] || 0) + 1 };
+      set({ taste });
+      await setJSON(KEYS.taste(pid), taste);
+    }
   },
 
   setLastLive: async (id) => {
@@ -214,8 +293,12 @@ export const useStore = create<State>((set, get) => ({
   },
 
   clearRecents: async () => {
-    set({ recents: [] });
-    await setJSON(KEYS.recents, []);
+    const pid = get().activeProfileId;
+    set({ recents: [], taste: {} });
+    if (pid) {
+      await setJSON(KEYS.recents(pid), []);
+      await setJSON(KEYS.taste(pid), {});
+    }
   },
 
   clearCache: async () => {
@@ -231,17 +314,17 @@ export const useStore = create<State>((set, get) => ({
   },
 
   saveProgress: async (entry) => {
-    if (!entry.key || !entry.url || !(entry.position > 0)) return;
+    const pid = get().activeProfileId;
+    if (!pid || !entry.key || !entry.url || !(entry.position > 0)) return;
     const progress = { ...get().progress };
     const ratio = entry.duration > 0 ? entry.position / entry.duration : 0;
-    // consider it watched once near the end → drop from "continue watching"
     if (entry.duration > 0 && ratio >= 0.95) {
       delete progress[entry.key];
     } else {
       progress[entry.key] = { ...entry, updatedAt: Date.now() };
     }
     set({ progress });
-    await setJSON(KEYS.progress, progress);
+    await setJSON(KEYS.progress(pid), progress);
   },
 
   getProgress: (key) => get().progress[key],
@@ -252,7 +335,8 @@ export const useStore = create<State>((set, get) => ({
       .sort((a, b) => b.updatedAt - a.updatedAt),
 
   clearProgress: async () => {
+    const pid = get().activeProfileId;
     set({ progress: {} });
-    await setJSON(KEYS.progress, {});
+    if (pid) await setJSON(KEYS.progress(pid), {});
   },
 }));

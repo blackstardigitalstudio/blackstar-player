@@ -26,7 +26,12 @@ Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
 - **Bilingue Italiano / Español**: tutta l'interfaccia si converte; lingua iniziale dal dispositivo,
   cambiabile dalle Impostazioni
 - **Riproduttore selezionabile**: interno, **MX Player**, **VLC** o "chiedi sempre" (player esterno via intent)
-- **EPG / Guida**: programma "In onda" e "A seguire" sui canali Live (Xtream `get_short_epg`)
+- **Multiutente**: profili stile Netflix con selezione all'avvio; ognuno con preferiti, cronologia,
+  "Continua a guardare" e consigli propri
+- **Consigli intelligenti** (algoritmo semplice): impara i tuoi gusti dai generi che guardi e propone
+  righe "Perché hai guardato…" e "Perché ti piacciono…"; nella ricerca mostra "Altri {genere}"
+- **Guida TV (EPG a griglia)**: schermata Guida con la timeline dei programmi per canale
+- **EPG / Now-Next**: programma "In onda" e "A seguire" sui canali Live (Xtream `get_short_epg`)
 - **Controllo parentale**: PIN a 4 cifre che nasconde i contenuti per adulti finché non sblocchi
 - **Trasmetti su TV**: apre la condivisione schermo di Android per vedere l'app sul televisore (mirroring)
 - **Icona e splash brandizzati** Blackstar (stella viola→magenta su nero)

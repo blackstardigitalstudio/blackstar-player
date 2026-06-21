@@ -7,6 +7,7 @@ import { Focusable } from '@/tv/Focusable';
 import { usePlayback } from '@/lib/playback';
 import { useVisibleContent } from '@/lib/content';
 import { normalize, relatedItems, searchItems } from '@/lib/search';
+import { itemsInCategory } from '@/lib/recommend';
 import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
 import { colors, font, radius, spacing } from '@/theme/tokens';
@@ -40,6 +41,11 @@ export default function Search() {
     return out;
   }, [scored]);
   const related = useMemo(() => (scored[0] ? relatedItems(scored[0].item, pool) : []), [scored, pool]);
+  const genre = scored[0]?.item.categoryName || scored[0]?.item.group;
+  const moreFromGenre = useMemo(
+    () => (genre ? itemsInCategory(pool, genre, new Set(results.map((r) => r.id))) : []),
+    [genre, pool, results],
+  );
 
   const go = (item: MediaItem) => play.open(item);
   const ready = q.trim().length >= 2;
@@ -91,6 +97,7 @@ export default function Search() {
           ) : (
             <>
               <Rail title={t('search.results', { n: results.length })} items={results} onSelect={go} variant="poster" />
+              {genre ? <Rail title={t('search.more', { cat: genre })} items={moreFromGenre} onSelect={go} variant="poster" /> : null}
               <Rail title={t('search.related')} items={related} onSelect={go} variant="poster" />
             </>
           )}

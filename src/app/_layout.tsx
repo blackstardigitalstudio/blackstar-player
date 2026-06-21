@@ -42,6 +42,7 @@ export default function RootLayout() {
             >
               <Stack.Screen name="index" />
               <Stack.Screen name="onboarding" />
+              <Stack.Screen name="profiles" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="player" />
               <Stack.Screen name="series/[id]" />

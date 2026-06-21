@@ -9,6 +9,7 @@ import { useStore } from '@/store/useStore';
 import { usePlayback } from '@/lib/playback';
 import { useVisibleContent } from '@/lib/content';
 import { recommendFromRecents } from '@/lib/search';
+import { becauseYouWatched, itemsInCategory, topCategories } from '@/lib/recommend';
 import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -22,6 +23,7 @@ export default function Home() {
   const recents = useStore((s) => s.recents);
   const favorites = useStore((s) => s.favorites);
   const progress = useStore((s) => s.progress);
+  const taste = useStore((s) => s.taste);
   const sources = useStore((s) => s.sources);
   const activeId = useStore((s) => s.activeId);
   const refresh = useStore((s) => s.refresh);
@@ -33,6 +35,15 @@ export default function Home() {
   const continueList = useMemo(
     () => Object.values(progress).filter((p) => p.position > 5).sort((a, b) => b.updatedAt - a.updatedAt),
     [progress],
+  );
+  const watchedIds = useMemo(() => new Set(recents.map((r) => r.id)), [recents]);
+  const bywRows = useMemo(() => becauseYouWatched(recents, pool), [recents, pool]);
+  const tasteRows = useMemo(
+    () =>
+      topCategories(taste, 3)
+        .map((cat) => ({ cat, items: itemsInCategory(pool, cat, watchedIds) }))
+        .filter((r) => r.items.length >= 4),
+    [taste, pool, watchedIds],
   );
 
   const [typed, setTyped] = useState('');
@@ -103,6 +114,12 @@ export default function Home() {
             entries={continueList}
             onSelect={(e) => play.playEntry(e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position })}
           />
+          {bywRows.map((r) => (
+            <Rail key={`byw-${r.seed.id}`} title={t('home.becauseWatched', { name: r.seed.name })} items={r.items} onSelect={go} variant="poster" />
+          ))}
+          {tasteRows.map((r) => (
+            <Rail key={`cat-${r.cat}`} title={t('home.becauseLike', { cat: r.cat })} items={r.items} onSelect={go} variant="poster" />
+          ))}
           <Rail title={t('home.recommended')} items={recommended} onSelect={go} variant="poster" />
           <Rail title={t('home.favorites')} items={favorites} onSelect={go} variant="poster" />
           <Rail title={t('home.liveChannels')} items={content.live.slice(0, 24)} onSelect={go} variant="tile" />

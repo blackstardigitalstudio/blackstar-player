@@ -145,6 +145,25 @@ const it: Dict = {
   'pin.cancel': 'Annulla',
   'pin.wrong': 'PIN errato',
   'pin.locked': 'Contenuto protetto da PIN',
+
+  'nav.guide': 'Guida',
+  'guide.title': 'Guida TV',
+  'guide.onlyXtream': 'La guida programmi è disponibile con i profili Xtream.',
+  'guide.noProgram': 'Nessun programma',
+
+  'home.becauseWatched': 'Perché hai guardato {name}',
+  'home.becauseLike': 'Perché ti piacciono: {cat}',
+  'search.more': 'Altri: {cat}',
+
+  'prof.who': 'Chi sta guardando?',
+  'prof.add': 'Aggiungi profilo',
+  'prof.name': 'Nome profilo',
+  'prof.create': 'Crea profilo',
+  'set.secUsers': 'Utenti',
+  'set.secSources': 'Liste e abbonamenti',
+  'set.switchProfile': 'Cambia profilo',
+  'set.activeProfile': 'Profilo attivo: {name}',
+  'set.removeProfileUser': 'Rimuovi profilo “{name}”',
 };
 
 const es: Dict = {
@@ -289,6 +308,25 @@ const es: Dict = {
   'pin.cancel': 'Cancelar',
   'pin.wrong': 'PIN incorrecto',
   'pin.locked': 'Contenido protegido con PIN',
+
+  'nav.guide': 'Guía',
+  'guide.title': 'Guía TV',
+  'guide.onlyXtream': 'La guía de programas está disponible con perfiles Xtream.',
+  'guide.noProgram': 'Sin programa',
+
+  'home.becauseWatched': 'Porque viste {name}',
+  'home.becauseLike': 'Porque te gusta: {cat}',
+  'search.more': 'Más: {cat}',
+
+  'prof.who': '¿Quién está viendo?',
+  'prof.add': 'Añadir perfil',
+  'prof.name': 'Nombre del perfil',
+  'prof.create': 'Crear perfil',
+  'set.secUsers': 'Usuarios',
+  'set.secSources': 'Listas y suscripciones',
+  'set.switchProfile': 'Cambiar perfil',
+  'set.activeProfile': 'Perfil activo: {name}',
+  'set.removeProfileUser': 'Eliminar perfil “{name}”',
 };
 
 const dict: Record<Lang, Dict> = { it, es };

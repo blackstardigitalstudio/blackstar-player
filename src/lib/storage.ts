@@ -5,10 +5,14 @@ import type { LoadedContent } from './types';
 export const KEYS = {
   sources: 'bs.sources',
   activeSource: 'bs.activeSourceId',
-  favorites: 'bs.favorites',
-  recents: 'bs.recents',
-  progress: 'bs.progress',
   settings: 'bs.settings',
+  profiles: 'bs.profiles',
+  activeProfile: 'bs.activeProfileId',
+  // per-profile data
+  fav: (p: string) => `bs.fav.${p}`,
+  recents: (p: string) => `bs.recents.${p}`,
+  progress: (p: string) => `bs.progress.${p}`,
+  taste: (p: string) => `bs.taste.${p}`,
 };
 
 export async function getJSON<T>(key: string, fallback: T): Promise<T> {

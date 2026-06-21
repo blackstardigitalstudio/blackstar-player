@@ -113,7 +113,24 @@ export default function Settings() {
         {t('set.title')}
       </Txt>
 
-      <Section title={t('set.secProfiles')}>
+      <Section title={t('set.secUsers')}>
+        <Row
+          icon="people"
+          label={t('set.switchProfile')}
+          value={s.profiles.find((p) => p.id === s.activeProfileId)?.name}
+          onPress={() => router.push('/profiles')}
+        />
+        {s.profiles.length > 1 && s.activeProfileId ? (
+          <Row
+            icon="person-remove"
+            label={t('set.removeProfileUser', { name: s.profiles.find((p) => p.id === s.activeProfileId)?.name || '' })}
+            danger
+            onPress={() => s.removeProfile(s.activeProfileId!)}
+          />
+        ) : null}
+      </Section>
+
+      <Section title={t('set.secSources')}>
         {s.sources.map((src) => (
           <Row
             key={src.id}

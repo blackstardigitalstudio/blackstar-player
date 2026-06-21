@@ -66,6 +66,14 @@ export interface SourceConfig {
   epgUrl?: string;
 }
 
+/** A user profile (Netflix-style): own favorites, history, recommendations. */
+export interface Profile {
+  id: string;
+  name: string;
+  color: string; // avatar color
+  createdAt: number;
+}
+
 /** Saved playback position for resume ("Continua a guardare"). */
 export interface ProgressEntry {
   key: string;
