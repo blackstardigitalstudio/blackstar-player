@@ -1,13 +1,13 @@
 import { View } from 'react-native';
 import { Browser } from '@/components/Browser';
-import { useStore } from '@/store/useStore';
 import { usePlayback } from '@/lib/playback';
+import { useVisibleContent } from '@/lib/content';
 import { useT } from '@/i18n';
 
 export default function Series() {
   const t = useT();
   const play = usePlayback();
-  const content = useStore((s) => s.content);
+  const content = useVisibleContent();
   return (
     <View style={{ flex: 1 }}>
       <Browser

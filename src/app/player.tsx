@@ -8,10 +8,17 @@ import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
-import { rebuildLiveUrl } from '@/lib/xtream';
+import { getShortEpg, rebuildLiveUrl, type EpgItem } from '@/lib/xtream';
+import { openCastSettings } from '@/lib/cast';
 import { useT } from '@/i18n';
 import type { MediaItem, SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
+
+function hhmm(ts: number) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 function buildSource(url: string) {
   const isHls = /\.m3u8(\?|$)/i.test(url);
@@ -70,6 +77,7 @@ export default function Player() {
   const [buffering, setBuffering] = useState(true);
   const [playing, setPlaying] = useState(true);
   const [overlay, setOverlay] = useState(true);
+  const [epg, setEpg] = useState<EpgItem[]>([]);
   const attempt = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didSeek = useRef(false);
@@ -187,6 +195,20 @@ export default function Player() {
     };
   }, [showOverlay]);
 
+  // EPG (now/next) for live channels on Xtream sources.
+  useEffect(() => {
+    let alive = true;
+    setEpg([]);
+    if (cur.isLive && source?.type === 'xtream' && cur.item?.streamId) {
+      getShortEpg(source, cur.item.streamId).then((list) => {
+        if (alive) setEpg(list);
+      });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [cur.isLive, cur.item?.streamId, source]);
+
   const zap = useCallback(
     (dir: number) => {
       if (!cur.isLive || content.live.length === 0) return;
@@ -225,6 +247,9 @@ export default function Player() {
   );
 
   const fav = cur.item ? isFavorite(cur.item.id) : false;
+  const nowSec = Date.now() / 1000;
+  const epgNow = epg.find((e) => e.startTs <= nowSec && e.endTs > nowSec) || epg[0];
+  const epgNext = epg.find((e) => e.startTs > (epgNow?.startTs || 0));
 
   return (
     <View style={styles.root}>
@@ -263,9 +288,24 @@ export default function Player() {
       {overlay ? (
         <>
           <View style={styles.topBar} pointerEvents="box-none">
-            <Txt variant="h2" numberOfLines={1} style={{ flex: 1 }}>
-              {cur.title}
-            </Txt>
+            <View style={{ flex: 1 }}>
+              <Txt variant="h2" numberOfLines={1}>
+                {cur.title}
+              </Txt>
+              {epgNow ? (
+                <Txt variant="small" numberOfLines={1} style={{ marginTop: 2 }}>
+                  <Txt variant="small" color={colors.accent}>
+                    {t('epg.now')}:{' '}
+                  </Txt>
+                  {epgNow.title} {hhmm(epgNow.startTs)}–{hhmm(epgNow.endTs)}
+                </Txt>
+              ) : null}
+              {epgNext ? (
+                <Txt variant="tiny" numberOfLines={1}>
+                  {t('epg.next')}: {epgNext.title} {hhmm(epgNext.startTs)}
+                </Txt>
+              ) : null}
+            </View>
             {cur.isLive ? (
               <View style={styles.liveBadge}>
                 <View style={styles.liveDot} />
@@ -297,6 +337,7 @@ export default function Player() {
                 onPress={() => cur.item && toggleFavorite(cur.item)}
               />
             ) : null}
+            <CtrlButton icon="tv-outline" label={t('pl.cast')} onPress={() => openCastSettings()} />
           </View>
         </>
       ) : null}

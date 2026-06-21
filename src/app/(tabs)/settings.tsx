@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { PinModal } from '@/components/PinModal';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { useStore, type PlayerMode } from '@/store/useStore';
+import { openCastSettings } from '@/lib/cast';
 import { useT } from '@/i18n';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -60,6 +63,41 @@ export default function Settings() {
   const s = useStore();
   const active = s.sources.find((x) => x.id === s.activeId);
 
+  const [pinMode, setPinMode] = useState<null | 'disable' | 'unlock' | 'setnew' | 'enableset'>(null);
+  const pinTitle = pinMode === 'setnew' || pinMode === 'enableset' ? t('pin.set') : t('pin.enter');
+
+  const handlePin = (pin: string): boolean | void => {
+    if (pinMode === 'disable') {
+      if (pin !== s.settings.pin) return false;
+      s.updateSettings({ parentalEnabled: false });
+      s.setUnlocked(false);
+    } else if (pinMode === 'unlock') {
+      if (pin !== s.settings.pin) return false;
+      s.setUnlocked(true);
+    } else if (pinMode === 'setnew') {
+      if (pin.length < 4) return false;
+      s.updateSettings({ pin });
+    } else if (pinMode === 'enableset') {
+      if (pin.length < 4) return false;
+      s.updateSettings({ pin, parentalEnabled: true });
+      s.setUnlocked(false);
+    }
+    setPinMode(null);
+  };
+
+  const toggleParental = () => {
+    if (s.settings.parentalEnabled) setPinMode('disable');
+    else if (s.settings.pin) {
+      s.updateSettings({ parentalEnabled: true });
+      s.setUnlocked(false);
+    } else setPinMode('enableset');
+  };
+
+  const castToTv = async () => {
+    const ok = await openCastSettings();
+    if (!ok) Alert.alert('Blackstar Player', t('cast.notSupported'));
+  };
+
   const aspectLabel = { contain: t('set.aspectContain'), cover: t('set.aspectCover'), fill: t('set.aspectFill') }[s.settings.aspectMode];
   const playerLabel = (m: PlayerMode) =>
     m === 'internal' ? t('player.internal') : m === 'ask' ? t('player.ask') : m === 'mxplayer' ? 'MX Player' : 'VLC';
@@ -69,6 +107,7 @@ export default function Settings() {
   };
 
   return (
+    <>
     <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
       <Txt variant="h2" style={{ marginBottom: spacing.md }}>
         {t('set.title')}
@@ -154,6 +193,28 @@ export default function Settings() {
         />
       </Section>
 
+      <Section title={t('set.secParental')}>
+        <Row
+          icon="lock-closed"
+          label={t('set.parental')}
+          value={s.settings.parentalEnabled ? t('common.on') : t('common.off')}
+          onPress={toggleParental}
+        />
+        {s.settings.parentalEnabled && !s.unlocked ? (
+          <Row icon="lock-open" label={t('set.unlock')} onPress={() => setPinMode('unlock')} />
+        ) : null}
+        {s.settings.parentalEnabled ? (
+          <Row icon="key" label={t('set.changePin')} onPress={() => setPinMode('setnew')} />
+        ) : null}
+      </Section>
+
+      <Section title={t('set.secCast')}>
+        <Row icon="tv" label={t('set.castToTv')} onPress={castToTv} />
+        <View style={{ padding: spacing.md, paddingTop: 0 }}>
+          <Txt variant="tiny">{t('set.castHint')}</Txt>
+        </View>
+      </Section>
+
       <Section title={t('set.secHistory')}>
         <Row icon="play-skip-forward" label={t('set.clearContinue', { n: Object.keys(s.progress).length })} danger onPress={() => s.clearProgress()} />
         <Row icon="time-outline" label={t('set.clearHistory', { n: s.recents.length })} danger onPress={() => s.clearRecents()} />
@@ -166,6 +227,8 @@ export default function Settings() {
         </View>
       </Section>
     </ScrollView>
+    <PinModal visible={pinMode !== null} title={pinTitle} onSubmit={handlePin} onClose={() => setPinMode(null)} />
+    </>
   );
 }
 

@@ -193,3 +193,53 @@ export async function loadSeriesInfo(c: SourceConfig, seriesId: string): Promise
   }
   return seasons;
 }
+
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function atobPoly(input: string): string {
+  const str = input.replace(/=+$/, '');
+  let out = '';
+  let bc = 0;
+  let bs = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = B64.indexOf(str.charAt(i));
+    if (c < 0) continue;
+    bs = bc % 4 ? bs * 64 + c : c;
+    if (bc++ % 4) out += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6)));
+  }
+  return out;
+}
+function decodeEpg(s: string): string {
+  if (!s) return '';
+  try {
+    return decodeURIComponent(escape(atobPoly(s)));
+  } catch {
+    try {
+      return atobPoly(s);
+    } catch {
+      return s;
+    }
+  }
+}
+
+export interface EpgItem {
+  title: string;
+  description: string;
+  startTs: number;
+  endTs: number;
+}
+
+/** Short EPG (now + next programs) for a live stream. */
+export async function getShortEpg(c: SourceConfig, streamId: string, limit = 4): Promise<EpgItem[]> {
+  try {
+    const data = await api<any>(c, 'get_short_epg', `&stream_id=${encodeURIComponent(streamId)}&limit=${limit}`);
+    const list = data?.epg_listings || [];
+    return list.map((e: any) => ({
+      title: decodeEpg(e.title || ''),
+      description: decodeEpg(e.description || ''),
+      startTs: Number(e.start_timestamp) || 0,
+      endTs: Number(e.stop_timestamp) || 0,
+    }));
+  } catch {
+    return [];
+  }
+}

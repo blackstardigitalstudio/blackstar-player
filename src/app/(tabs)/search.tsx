@@ -4,8 +4,8 @@ import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Rail } from '@/components/Rail';
 import { Empty, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
-import { useStore } from '@/store/useStore';
 import { usePlayback } from '@/lib/playback';
+import { useVisibleContent } from '@/lib/content';
 import { normalize, relatedItems, searchItems } from '@/lib/search';
 import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
@@ -14,7 +14,7 @@ import { colors, font, radius, spacing } from '@/theme/tokens';
 export default function Search() {
   const t = useT();
   const play = usePlayback();
-  const content = useStore((s) => s.content);
+  const content = useVisibleContent();
   const [q, setQ] = useState('');
   const [dq, setDq] = useState(''); // debounced query — keeps typing smooth on huge lists
   const [focused, setFocused] = useState(false);

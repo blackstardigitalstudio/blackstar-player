@@ -26,6 +26,10 @@ Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
 - **Bilingue Italiano / Español**: tutta l'interfaccia si converte; lingua iniziale dal dispositivo,
   cambiabile dalle Impostazioni
 - **Riproduttore selezionabile**: interno, **MX Player**, **VLC** o "chiedi sempre" (player esterno via intent)
+- **EPG / Guida**: programma "In onda" e "A seguire" sui canali Live (Xtream `get_short_epg`)
+- **Controllo parentale**: PIN a 4 cifre che nasconde i contenuti per adulti finché non sblocchi
+- **Trasmetti su TV**: apre la condivisione schermo di Android per vedere l'app sul televisore (mirroring)
+- **Icona e splash brandizzati** Blackstar (stella viola→magenta su nero)
 - **Zapping con barra numerica**: digita il numero del canale per saltarci direttamente
 - **Modalità sopravvivenza**: ritenta automaticamente formati/stream alternativi se un canale cade
 - **Player** con play/pausa, formato immagine (Adatta/Riempi/Estendi), preferiti e cambio canale Live

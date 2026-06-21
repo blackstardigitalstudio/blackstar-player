@@ -27,6 +27,8 @@ export interface Settings {
   autoCleanupHours: number;
   confirmExit: boolean;
   playerMode: PlayerMode;
+  parentalEnabled: boolean;
+  pin: string;
 }
 
 function deviceLang(): Lang {
@@ -48,6 +50,8 @@ const DEFAULT_SETTINGS: Settings = {
   autoCleanupHours: 6,
   confirmExit: true,
   playerMode: 'internal',
+  parentalEnabled: false,
+  pin: '',
 };
 
 const EMPTY: LoadedContent = { live: [], movies: [], series: [], categories: [], loadedAt: 0 };
@@ -64,8 +68,11 @@ interface State {
   progress: Record<string, ProgressEntry>;
   lastLiveId: string | null;
   settings: Settings;
+  /** Session-only unlock for parental-locked content (not persisted). */
+  unlocked: boolean;
 
   hydrate: () => Promise<void>;
+  setUnlocked: (v: boolean) => void;
   addSource: (s: SourceConfig, content?: LoadedContent) => Promise<void>;
   removeSource: (id: string) => Promise<void>;
   setActive: (id: string) => Promise<void>;
@@ -95,6 +102,9 @@ export const useStore = create<State>((set, get) => ({
   progress: {},
   lastLiveId: null,
   settings: DEFAULT_SETTINGS,
+  unlocked: false,
+
+  setUnlocked: (v) => set({ unlocked: v }),
 
   hydrate: async () => {
     const [sources, activeId, favorites, recents, progress, settings] = await Promise.all([

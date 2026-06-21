@@ -10,7 +10,7 @@
     "backgroundColor": "#0A0A0F",
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "package": "studio.blackstar.player",

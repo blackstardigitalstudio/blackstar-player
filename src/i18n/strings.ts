@@ -125,6 +125,26 @@ const it: Dict = {
   'sd.noEpisodes': 'Nessun episodio trovato',
   'sd.error': 'Errore',
   'sd.season': 'Stagione {n}',
+
+  'epg.now': 'In onda',
+  'epg.next': 'A seguire',
+
+  'pl.cast': 'Su TV',
+
+  'set.secParental': 'Controllo parentale',
+  'set.parental': 'Blocco contenuti per adulti',
+  'set.unlock': 'Sblocca per questa sessione',
+  'set.changePin': 'Cambia PIN',
+  'set.secCast': 'Trasmissione',
+  'set.castToTv': 'Trasmetti su TV (condividi schermo)',
+  'set.castHint': 'Apre le impostazioni di trasmissione schermo di Android per vedere l’app sul televisore.',
+  'cast.notSupported': 'Trasmissione non disponibile su questo dispositivo.',
+  'pin.enter': 'Inserisci PIN',
+  'pin.set': 'Imposta un PIN (4 cifre)',
+  'pin.confirm': 'Conferma',
+  'pin.cancel': 'Annulla',
+  'pin.wrong': 'PIN errato',
+  'pin.locked': 'Contenuto protetto da PIN',
 };
 
 const es: Dict = {
@@ -249,6 +269,26 @@ const es: Dict = {
   'sd.noEpisodes': 'No se han encontrado episodios',
   'sd.error': 'Error',
   'sd.season': 'Temporada {n}',
+
+  'epg.now': 'En emisión',
+  'epg.next': 'A continuación',
+
+  'pl.cast': 'A la TV',
+
+  'set.secParental': 'Control parental',
+  'set.parental': 'Bloqueo de contenido adulto',
+  'set.unlock': 'Desbloquear en esta sesión',
+  'set.changePin': 'Cambiar PIN',
+  'set.secCast': 'Transmisión',
+  'set.castToTv': 'Enviar a la TV (compartir pantalla)',
+  'set.castHint': 'Abre los ajustes de transmisión de pantalla de Android para ver la app en el televisor.',
+  'cast.notSupported': 'Transmisión no disponible en este dispositivo.',
+  'pin.enter': 'Introduce el PIN',
+  'pin.set': 'Establece un PIN (4 dígitos)',
+  'pin.confirm': 'Confirmar',
+  'pin.cancel': 'Cancelar',
+  'pin.wrong': 'PIN incorrecto',
+  'pin.locked': 'Contenido protegido con PIN',
 };
 
 const dict: Record<Lang, Dict> = { it, es };

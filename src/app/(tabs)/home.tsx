@@ -7,6 +7,7 @@ import { Empty, GhostButton, Spinner, Txt } from '@/components/ui';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
 import { usePlayback } from '@/lib/playback';
+import { useVisibleContent } from '@/lib/content';
 import { recommendFromRecents } from '@/lib/search';
 import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
@@ -15,7 +16,7 @@ import { colors, radius, spacing } from '@/theme/tokens';
 export default function Home() {
   const t = useT();
   const play = usePlayback();
-  const content = useStore((s) => s.content);
+  const content = useVisibleContent();
   const loading = useStore((s) => s.loading);
   const error = useStore((s) => s.error);
   const recents = useStore((s) => s.recents);
