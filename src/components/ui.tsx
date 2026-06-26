@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
@@ -80,22 +81,13 @@ export function Empty({ icon = 'tv-outline', title, hint }: { icon?: any; title:
 
 export function BrandMark({ size = 30 }: { size?: number }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <LinearGradient
-        colors={gradients.brand}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          width: size + 10,
-          height: size + 10,
-          borderRadius: radius.md,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name="star" size={size - 6} color={colors.white} />
-      </LinearGradient>
-      <Text style={{ fontSize: size * 0.7, fontWeight: font.weightBold, color: colors.text, letterSpacing: 0.5 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <Image
+        source={require('../../assets/images/brand-logo.png')}
+        style={{ width: size + 12, height: size + 12 }}
+        contentFit="contain"
+      />
+      <Text style={{ fontSize: size * 0.7, fontWeight: font.weightBold, color: colors.text, letterSpacing: 1 }}>
         BLACKSTAR
       </Text>
     </View>

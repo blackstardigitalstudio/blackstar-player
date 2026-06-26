@@ -30,11 +30,13 @@ Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
   "Continua a guardare" e consigli propri
 - **Consigli intelligenti** (algoritmo semplice): impara i tuoi gusti dai generi che guardi e propone
   righe "Perché hai guardato…" e "Perché ti piacciono…"; nella ricerca mostra "Altri {genere}"
-- **Guida TV (EPG a griglia)**: schermata Guida con la timeline dei programmi per canale
+- **Guida TV (EPG a griglia)**: vera griglia con **fascia oraria scorrevole**, colonna canali fissa,
+  blocchi programma posizionati per orario e indicatore "adesso"
+- **Profili con avatar colorati selezionabili**
 - **EPG / Now-Next**: programma "In onda" e "A seguire" sui canali Live (Xtream `get_short_epg`)
 - **Controllo parentale**: PIN a 4 cifre che nasconde i contenuti per adulti finché non sblocchi
 - **Trasmetti su TV**: apre la condivisione schermo di Android per vedere l'app sul televisore (mirroring)
-- **Icona e splash brandizzati** Blackstar (stella viola→magenta su nero)
+- **Icona e splash con il logo Blackstar reale** (anello aperto) tinto viola→magenta su nero
 - **Zapping con barra numerica**: digita il numero del canale per saltarci direttamente
 - **Modalità sopravvivenza**: ritenta automaticamente formati/stream alternativi se un canale cade
 - **Player** con play/pausa, formato immagine (Adatta/Riempi/Estendi), preferiti e cambio canale Live
