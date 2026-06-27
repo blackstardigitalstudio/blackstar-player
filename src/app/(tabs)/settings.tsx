@@ -232,6 +232,10 @@ export default function Settings() {
         </View>
       </Section>
 
+      <Section title={t('set.secVpn')}>
+        <Row icon="shield-half" label={t('set.vpnOpen')} onPress={() => router.push('/vpn')} />
+      </Section>
+
       <Section title={t('set.secHistory')}>
         <Row icon="play-skip-forward" label={t('set.clearContinue', { n: Object.keys(s.progress).length })} danger onPress={() => s.clearProgress()} />
         <Row icon="time-outline" label={t('set.clearHistory', { n: s.recents.length })} danger onPress={() => s.clearRecents()} />

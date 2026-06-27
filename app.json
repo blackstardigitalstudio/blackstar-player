@@ -25,7 +25,10 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.BIND_VPN_SERVICE",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -60,7 +63,8 @@
       "./plugins/withTVRemote",
       "./plugins/withAndroidTV",
       "expo-localization",
-      "react-native-google-cast"
+      "react-native-google-cast",
+      "react-native-wireguard-vpn"
     ],
     "experiments": {
       "typedRoutes": true,
