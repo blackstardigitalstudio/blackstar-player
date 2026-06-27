@@ -19,7 +19,7 @@ function Card({ entry, focused }: { entry: ProgressEntry; focused: boolean }) {
     <View style={{ width: POSTER_W }}>
       <View style={[styles.poster, focused && styles.focus]}>
         {entry.poster ? (
-          <Image source={{ uri: entry.poster }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+          <Image source={{ uri: entry.poster }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={entry.key} cachePolicy="memory-disk" />
         ) : (
           <LinearGradient colors={gradients.brandSoft} style={[StyleSheet.absoluteFill, styles.fallback]}>
             <Txt variant="h1" color={colors.white}>

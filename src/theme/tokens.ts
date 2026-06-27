@@ -43,6 +43,18 @@ export const gradients = {
   fade: ['transparent', 'rgba(10,10,15,0.6)', '#0A0A0F'] as const,
 };
 
+import { Dimensions } from 'react-native';
+
+// Phones (shortest side < 500dp) get a compact scale; TV/tablets keep the
+// 10-foot sizing. Based on the shortest side so it is stable across rotation.
+const shortestSide = (() => {
+  const { width, height } = Dimensions.get('window');
+  return Math.min(width, height);
+})();
+export const compact = shortestSide < 500;
+const S = compact ? 0.78 : 1;
+const r = (n: number) => Math.round(n * S);
+
 export const radius = {
   sm: 8,
   md: 12,
@@ -52,23 +64,23 @@ export const radius = {
 };
 
 export const spacing = {
-  xs: 6,
-  sm: 10,
-  md: 16,
-  lg: 24,
-  xl: 36,
-  xxl: 56,
+  xs: r(6),
+  sm: r(10),
+  md: r(16),
+  lg: r(22),
+  xl: r(34),
+  xxl: r(52),
 };
 
-// Type scale tuned for 10-foot (TV) viewing.
+// Type scale — large for TV, scaled down on phones.
 export const font = {
-  display: 40,
-  h1: 30,
-  h2: 24,
-  h3: 20,
-  body: 17,
-  small: 15,
-  tiny: 13,
+  display: r(40),
+  h1: r(30),
+  h2: r(24),
+  h3: r(20),
+  body: r(17),
+  small: r(15),
+  tiny: r(13),
   weightBold: '800' as const,
   weightSemi: '600' as const,
   weightReg: '400' as const,

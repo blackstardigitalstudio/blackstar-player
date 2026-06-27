@@ -107,7 +107,7 @@ function ChannelCell({ channel, onPlay }: { channel: MediaItem; onPlay: () => vo
       {(f) => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {channel.logo ? (
-            <Image source={{ uri: channel.logo }} style={styles.logo} contentFit="contain" />
+            <Image source={{ uri: channel.logo }} style={styles.logo} contentFit="contain" recyclingKey={channel.id} cachePolicy="memory-disk" />
           ) : (
             <Ionicons name="tv" size={22} color={colors.textFaint} />
           )}

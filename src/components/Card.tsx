@@ -3,14 +3,15 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
+import { colors, compact, font, gradients, radius, spacing } from '@/theme/tokens';
 import type { MediaItem } from '@/lib/types';
 import { Txt } from './ui';
 
-export const POSTER_W = 158;
-export const POSTER_H = 232;
-export const TILE_W = 196;
-export const TILE_H = 130;
+const SC = compact ? 0.78 : 1;
+export const POSTER_W = Math.round(158 * SC);
+export const POSTER_H = Math.round(232 * SC);
+export const TILE_W = Math.round(196 * SC);
+export const TILE_H = Math.round(130 * SC);
 
 function Fallback({ name, rounded = radius.md }: { name: string; rounded?: number }) {
   return (
@@ -27,7 +28,7 @@ export function PosterCard({ item, focused }: { item: MediaItem; focused: boolea
     <View style={{ width: POSTER_W }}>
       <View style={[styles.poster, focused && styles.posterFocus]}>
         {item.logo ? (
-          <Image source={{ uri: item.logo }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+          <Image source={{ uri: item.logo }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} recyclingKey={item.id} cachePolicy="memory-disk" />
         ) : (
           <Fallback name={item.name} />
         )}
@@ -52,7 +53,7 @@ export function ChannelCard({ item, focused }: { item: MediaItem; focused: boole
     <View style={{ width: TILE_W }}>
       <View style={[styles.tile, focused && styles.posterFocus]}>
         {item.logo ? (
-          <Image source={{ uri: item.logo }} style={styles.logo} contentFit="contain" transition={150} />
+          <Image source={{ uri: item.logo }} style={styles.logo} contentFit="contain" transition={150} recyclingKey={item.id} cachePolicy="memory-disk" />
         ) : (
           <Ionicons name="tv" size={40} color={colors.textFaint} />
         )}

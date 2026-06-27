@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, focusRing, radius } from '@/theme/tokens';
+import { colors, compact, focusRing, radius } from '@/theme/tokens';
 import { useRemote, type Rect } from './RemoteProvider';
 
 let counter = 0;
@@ -48,7 +48,8 @@ export function Focusable({
   );
 
   useEffect(() => {
-    if (disabled) {
+    // On phones (compact/touch) skip the spatial focus engine entirely.
+    if (disabled || compact) {
       unregister(id);
       return;
     }
@@ -65,7 +66,7 @@ export function Focusable({
   }, [register, unregister, id, measure, onSelect, onFocus, disabled]);
 
   useEffect(() => {
-    if (autoFocus && !disabled) requestFocus(id);
+    if (autoFocus && !disabled && !compact) requestFocus(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,10 +75,16 @@ export function Focusable({
       ref={ref as any}
       disabled={disabled}
       onPress={onSelect}
-      onPressIn={() => requestFocus(id)}
-      style={[style, focused && (focusStyle ?? styles.focused)]}
+      onPressIn={() => {
+        if (!compact) requestFocus(id);
+      }}
+      style={({ pressed }) => [
+        style,
+        !compact && focused && (focusStyle ?? styles.focused),
+        compact && pressed && styles.pressed,
+      ]}
     >
-      {typeof children === 'function' ? (children as any)(focused) : children}
+      {typeof children === 'function' ? (children as any)(compact ? false : focused) : children}
     </Pressable>
   );
 }
@@ -93,4 +100,5 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
+  pressed: { opacity: 0.55 },
 });

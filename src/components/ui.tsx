@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
-import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
+import { colors, compact, font, gradients, radius, spacing } from '@/theme/tokens';
 
 type TxtProps = {
   children: React.ReactNode;
@@ -109,19 +109,22 @@ export function PrimaryButton({
 }) {
   return (
     <Focusable onSelect={onPress} autoFocus={autoFocus} style={{ borderRadius: radius.pill }}>
-      {(focused) => (
-        <LinearGradient
-          colors={focused ? gradients.brand : (['#2A2A3A', '#20202E'] as const)}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.btn, wide && { paddingHorizontal: spacing.xxl }]}
-        >
-          {icon ? <Ionicons name={icon} size={20} color={focused ? colors.white : colors.text} /> : null}
-          <Text style={{ color: focused ? colors.white : colors.text, fontWeight: font.weightBold, fontSize: font.body }}>
-            {label}
-          </Text>
-        </LinearGradient>
-      )}
+      {(focused) => {
+        const active = compact || focused;
+        return (
+          <LinearGradient
+            colors={active ? gradients.brand : (['#2A2A3A', '#20202E'] as const)}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.btn, wide && { paddingHorizontal: spacing.xxl }]}
+          >
+            {icon ? <Ionicons name={icon} size={20} color={active ? colors.white : colors.text} /> : null}
+            <Text style={{ color: active ? colors.white : colors.text, fontWeight: font.weightBold, fontSize: font.body }}>
+              {label}
+            </Text>
+          </LinearGradient>
+        );
+      }}
     </Focusable>
   );
 }

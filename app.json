@@ -3,7 +3,7 @@
     "name": "Blackstar Player",
     "slug": "blackstar-player",
     "version": "1.0.0",
-    "orientation": "landscape",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "blackstarplayer",
     "userInterfaceStyle": "dark",
