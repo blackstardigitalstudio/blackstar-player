@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { useT } from '@/i18n';
+import { useStore } from '@/store/useStore';
+import { sortCategories } from '@/lib/categories';
 import { colors, radius, spacing } from '@/theme/tokens';
 import type { Category, MediaItem, MediaKind } from '@/lib/types';
 import { MediaGrid } from './Rail';
@@ -35,7 +37,13 @@ export function Browser({
   variant: 'poster' | 'tile';
 }) {
   const t = useT();
-  const cats = useMemo(() => categories.filter((c) => c.kind === kind), [categories, kind]);
+  const order = useStore((s) => s.settings.categoryOrder);
+  const manual = useStore((s) => s.settings.categoryManual);
+  const taste = useStore((s) => s.taste);
+  const cats = useMemo(
+    () => sortCategories(categories.filter((c) => c.kind === kind), order, taste, manual),
+    [categories, kind, order, taste, manual],
+  );
   const [sel, setSel] = useState<string>('all');
 
   const filtered = useMemo(

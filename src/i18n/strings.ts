@@ -164,6 +164,14 @@ const it: Dict = {
   'set.switchProfile': 'Cambia profilo',
   'set.activeProfile': 'Profilo attivo: {name}',
   'set.removeProfileUser': 'Rimuovi profilo “{name}”',
+
+  'set.catOrder': 'Ordine categorie',
+  'cat.title': 'Ordine categorie',
+  'cat.default': 'Predefinito',
+  'cat.alpha': 'Alfabetico',
+  'cat.mostWatched': 'Più viste',
+  'cat.manual': 'Manuale',
+  'cat.manualHint': 'Usa le frecce per spostare le categorie più in alto o più in basso.',
 };
 
 const es: Dict = {
@@ -327,6 +335,14 @@ const es: Dict = {
   'set.switchProfile': 'Cambiar perfil',
   'set.activeProfile': 'Perfil activo: {name}',
   'set.removeProfileUser': 'Eliminar perfil “{name}”',
+
+  'set.catOrder': 'Orden de categorías',
+  'cat.title': 'Orden de categorías',
+  'cat.default': 'Predeterminado',
+  'cat.alpha': 'Alfabético',
+  'cat.mostWatched': 'Más vistas',
+  'cat.manual': 'Manual',
+  'cat.manualHint': 'Usa las flechas para mover las categorías arriba o abajo.',
 };
 
 const dict: Record<Lang, Dict> = { it, es };

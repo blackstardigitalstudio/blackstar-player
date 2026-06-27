@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { ContinueRail } from '@/components/ContinueRail';
 import { Rail } from '@/components/Rail';
 import { Empty, GhostButton, Spinner, Txt } from '@/components/ui';
+import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
 import { usePlayback } from '@/lib/playback';
@@ -14,8 +17,25 @@ import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
 
+function Folder({ label, icon, color, count, onPress }: { label: string; icon: any; color: string; count?: number; onPress: () => void }) {
+  return (
+    <Focusable onSelect={onPress} style={styles.folder} focusStyle={styles.folderFocus}>
+      {(f) => (
+        <LinearGradient colors={[color + '33', colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.folderInner, f && { borderColor: color }]}>
+          <Ionicons name={icon} size={34} color={color} />
+          <Txt variant="h3" numberOfLines={1}>
+            {label}
+          </Txt>
+          {count ? <Txt variant="tiny">{count}</Txt> : null}
+        </LinearGradient>
+      )}
+    </Focusable>
+  );
+}
+
 export default function Home() {
   const t = useT();
+  const router = useRouter();
   const play = usePlayback();
   const content = useVisibleContent();
   const loading = useStore((s) => s.loading);
@@ -24,12 +44,7 @@ export default function Home() {
   const favorites = useStore((s) => s.favorites);
   const progress = useStore((s) => s.progress);
   const taste = useStore((s) => s.taste);
-  const sources = useStore((s) => s.sources);
-  const activeId = useStore((s) => s.activeId);
-  const refresh = useStore((s) => s.refresh);
-  const showNumbers = useStore((s) => s.settings.showChannelNumbers);
 
-  const activeName = sources.find((s) => s.id === activeId)?.name ?? '';
   const pool = useMemo(() => [...content.movies, ...content.series, ...content.live], [content]);
   const recommended = useMemo(() => recommendFromRecents(recents, pool), [recents, pool]);
   const continueList = useMemo(
@@ -46,24 +61,32 @@ export default function Home() {
     [taste, pool, watchedIds],
   );
 
+  const folders = useMemo(
+    () =>
+      [
+        { key: 'live', label: t('nav.live'), icon: 'tv', color: colors.live, count: content.live.length, path: '/(tabs)/live' },
+        { key: 'movies', label: t('nav.movies'), icon: 'film', color: colors.primary, count: content.movies.length, path: '/(tabs)/movies' },
+        { key: 'series', label: t('nav.series'), icon: 'albums', color: colors.accent, count: content.series.length, path: '/(tabs)/series' },
+        { key: 'search', label: t('nav.search'), icon: 'search', color: colors.success, count: 0, path: '/(tabs)/search' },
+      ].filter((f) => f.key === 'search' || f.count > 0),
+    [content, t],
+  );
+
+  // Number-bar zapping (TV).
   const [typed, setTyped] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const jumpToNumber = useCallback(
     (num: string) => {
-      const n = Number(num);
-      const ch = content.live.find((c) => c.number === n);
+      const ch = content.live.find((c) => c.number === Number(num));
       setTyped('');
       if (ch) play.open(ch);
     },
     [content.live, play],
   );
-
   useKeyHandler(
     (key) => {
       if (key.startsWith('digit:')) {
-        const d = key.split(':')[1];
-        const next = (typed + d).slice(0, 4);
+        const next = (typed + key.split(':')[1]).slice(0, 4);
         setTyped(next);
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(() => jumpToNumber(next), 1600);
@@ -80,24 +103,13 @@ export default function Home() {
   );
 
   const go = (item: MediaItem) => play.open(item);
-  const hasAny = content.live.length + content.movies.length + content.series.length > 0;
+  const hasAny = pool.length > 0;
 
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.header}>
-        <View>
-          <Txt variant="h2">{t('home.hi')}</Txt>
-          <Txt variant="small">{activeName ? t('home.activeProfile', { name: activeName }) : t('home.noProfile')}</Txt>
-        </View>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          {showNumbers && content.live.length > 0 ? (
-            <View style={styles.hint}>
-              <Ionicons name="keypad" size={16} color={colors.textMuted} />
-              <Txt variant="tiny">{t('home.zapHint')}</Txt>
-            </View>
-          ) : null}
-          <GhostButton label={t('common.refresh')} icon="refresh" onPress={() => refresh(true)} />
-        </View>
+        <Txt variant="h2">Blackstar</Txt>
+        <GhostButton label={t('common.refresh')} icon="refresh" onPress={() => useStore.getState().refresh(true)} />
       </View>
 
       {loading && !hasAny ? (
@@ -109,11 +121,20 @@ export default function Home() {
           hint={error ?? t('home.emptyHint')}
         />
       ) : (
-        <ScrollView contentContainerStyle={{ paddingTop: spacing.sm, paddingBottom: spacing.xxl }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+          {/* Big category folders */}
+          <View style={styles.folders}>
+            {folders.map((fld) => (
+              <Folder key={fld.key} label={fld.label} icon={fld.icon} color={fld.color} count={fld.count || undefined} onPress={() => router.replace(fld.path as any)} />
+            ))}
+          </View>
+
+          {/* Recommendations (kept) */}
           <ContinueRail
             entries={continueList}
             onSelect={(e) => play.playEntry(e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position })}
           />
+          {favorites.length ? <Rail title={t('home.favorites')} items={favorites} onSelect={go} variant="poster" /> : null}
           {bywRows.map((r) => (
             <Rail key={`byw-${r.seed.id}`} title={t('home.becauseWatched', { name: r.seed.name })} items={r.items} onSelect={go} variant="poster" />
           ))}
@@ -121,10 +142,6 @@ export default function Home() {
             <Rail key={`cat-${r.cat}`} title={t('home.becauseLike', { cat: r.cat })} items={r.items} onSelect={go} variant="poster" />
           ))}
           <Rail title={t('home.recommended')} items={recommended} onSelect={go} variant="poster" />
-          <Rail title={t('home.favorites')} items={favorites} onSelect={go} variant="poster" />
-          <Rail title={t('home.liveChannels')} items={content.live.slice(0, 24)} onSelect={go} variant="tile" />
-          <Rail title={t('home.movies')} items={content.movies.slice(0, 24)} onSelect={go} variant="poster" />
-          <Rail title={t('home.series')} items={content.series.slice(0, 24)} onSelect={go} variant="poster" />
         </ScrollView>
       )}
 
@@ -149,14 +166,17 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  hint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
+  folders: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  folder: { flexGrow: 1, flexBasis: 150, borderRadius: radius.lg },
+  folderFocus: {},
+  folderInner: {
+    height: 104,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    padding: spacing.md,
+    justifyContent: 'center',
+    gap: 4,
   },
   zap: {
     position: 'absolute',

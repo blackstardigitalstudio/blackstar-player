@@ -197,6 +197,12 @@ export default function Settings() {
           onPress={() => s.updateSettings({ language: s.settings.language === 'it' ? 'es' : 'it' })}
         />
         <Row
+          icon="swap-vertical"
+          label={t('set.catOrder')}
+          value={t(`cat.${s.settings.categoryOrder === 'mostWatched' ? 'mostWatched' : s.settings.categoryOrder}`)}
+          onPress={() => router.push('/categories')}
+        />
+        <Row
           icon="keypad"
           label={t('set.showNumbers')}
           value={s.settings.showChannelNumbers ? t('common.on') : t('common.off')}

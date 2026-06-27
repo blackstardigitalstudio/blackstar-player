@@ -1,5 +1,5 @@
-import React from 'react';
-import { FlatList, useWindowDimensions, View } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { spacing } from '@/theme/tokens';
 import type { MediaItem } from '@/lib/types';
@@ -66,12 +66,16 @@ export function MediaGrid({
   header?: React.ReactElement;
   empty?: React.ReactElement;
 }) {
-  const { width } = useWindowDimensions();
+  // Measure the actual container width (excludes the side nav) so the last
+  // column is never cut off.
+  const [w, setW] = useState(0);
   const cardW = variant === 'poster' ? POSTER_W : TILE_W;
-  const cols = Math.max(2, Math.floor((width - spacing.lg) / (cardW + spacing.md)));
+  const usable = (w || 360) - spacing.lg * 2;
+  const cols = Math.max(2, Math.floor((usable + spacing.md) / (cardW + spacing.md)));
 
   return (
     <FlatList
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
       data={items}
       key={`${variant}-${cols}`}
       numColumns={cols}

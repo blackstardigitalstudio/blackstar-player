@@ -29,6 +29,8 @@ export interface Settings {
   playerMode: PlayerMode;
   parentalEnabled: boolean;
   pin: string;
+  categoryOrder: 'default' | 'alpha' | 'mostWatched' | 'manual';
+  categoryManual: string[];
 }
 
 function deviceLang(): Lang {
@@ -52,6 +54,8 @@ const DEFAULT_SETTINGS: Settings = {
   playerMode: 'internal',
   parentalEnabled: false,
   pin: '',
+  categoryOrder: 'default',
+  categoryManual: [],
 };
 
 export const PROFILE_COLORS = ['#A855F7', '#22D3EE', '#34D399', '#FBBF24', '#FB7185', '#60A5FA'];

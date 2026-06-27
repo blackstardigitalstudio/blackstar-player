@@ -46,6 +46,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="player" />
               <Stack.Screen name="series/[id]" />
+              <Stack.Screen name="categories" />
             </Stack>
           </RemoteProvider>
         </ThemeProvider>

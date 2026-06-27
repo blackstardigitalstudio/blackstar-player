@@ -52,7 +52,7 @@ export default function Player() {
   const settings = useStore((s) => s.settings);
   const addRecent = useStore((s) => s.addRecent);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
-  const isFavorite = useStore((s) => s.isFavorite);
+  const favorites = useStore((s) => s.favorites);
   const saveProgress = useStore((s) => s.saveProgress);
   const getProgress = useStore((s) => s.getProgress);
 
@@ -228,10 +228,8 @@ export default function Player() {
 
   useKeyHandler(
     (key) => {
-      if (key === 'back') {
-        router.back();
-        return true;
-      }
+      // NB: do NOT handle 'back' here — the OS/expo-router already pops the
+      // screen. Handling it again caused a double-back that exited the app.
       showOverlay();
       if (key === 'playpause') {
         togglePlay();
@@ -246,7 +244,7 @@ export default function Player() {
     [cur.isLive, zap, togglePlay, showOverlay],
   );
 
-  const fav = cur.item ? isFavorite(cur.item.id) : false;
+  const fav = cur.item ? favorites.some((f) => f.id === cur.item!.id) : false;
   const nowSec = Date.now() / 1000;
   const epgNow = epg.find((e) => e.startTs <= nowSec && e.endTs > nowSec) || epg[0];
   const epgNext = epg.find((e) => e.startTs > (epgNow?.startTs || 0));
@@ -333,6 +331,7 @@ export default function Player() {
             {cur.item ? (
               <CtrlButton
                 icon={fav ? 'heart' : 'heart-outline'}
+                iconColor={fav ? colors.danger : undefined}
                 label={t('pl.favorite')}
                 onPress={() => cur.item && toggleFavorite(cur.item)}
               />
@@ -345,12 +344,12 @@ export default function Player() {
   );
 }
 
-function CtrlButton({ icon, label, onPress, autoFocus }: { icon: any; label: string; onPress: () => void; autoFocus?: boolean }) {
+function CtrlButton({ icon, label, onPress, autoFocus, iconColor }: { icon: any; label: string; onPress: () => void; autoFocus?: boolean; iconColor?: string }) {
   return (
     <Focusable onSelect={onPress} autoFocus={autoFocus} style={styles.ctrl} focusStyle={styles.ctrlFocus}>
       {(f) => (
         <View style={{ alignItems: 'center', gap: 4 }}>
-          <Ionicons name={icon} size={26} color={f ? colors.white : colors.text} />
+          <Ionicons name={icon} size={26} color={iconColor ?? (f ? colors.white : colors.text)} />
           <Txt variant="tiny" color={f ? colors.text : colors.textMuted}>
             {label}
           </Txt>
