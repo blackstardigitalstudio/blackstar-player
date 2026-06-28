@@ -6,7 +6,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, vpn]
   workflow_dispatch:
 
 permissions:
