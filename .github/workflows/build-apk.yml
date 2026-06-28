@@ -7,6 +7,9 @@ name: Build Android APK
 on:
   push:
     branches: [main, vpn]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
   workflow_dispatch:
 
 permissions:

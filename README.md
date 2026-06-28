@@ -1,104 +1,153 @@
+<div align="center">
+
 # ⭐ Blackstar Player
 
-Player **IPTV** moderno, veloce e ottimizzato per la **TV / box Android**, realizzato con Expo (React Native).
-Parte del mondo **Blackstar Digital Studio**. **Made in Italy** 🇮🇹
+**Player IPTV moderno, velocissimo e ottimizzato per TV / box Android.**
+M3U + Xtream Codes · Live · Film · Serie · EPG · Chromecast · VPN · Multiutente.
 
-> Blackstar Player **non fornisce alcun contenuto né alcun server**. Riproduce esclusivamente la lista
-> (M3U) o l'abbonamento (Xtream) che inserisci **tu**. Nessun account, nessuna pubblicità, nessuna
-> telemetria: i tuoi dati restano sul dispositivo.
+[![Scarica APK](https://img.shields.io/badge/⬇️%20Scarica-APK-A855F7?style=for-the-badge)](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest/download/blackstar-player.apk)
+[![Release](https://img.shields.io/github/v/release/blackstardigitalstudio/blackstar-player?style=for-the-badge&color=D946EF)](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest)
+[![Made in Italy](https://img.shields.io/badge/Made%20in-Italy%20🇮🇹-success?style=for-the-badge)](https://blackstar.digital)
+
+di **[Blackstar Digital Studio](https://blackstar.digital)**
+
+</div>
+
+> **EN — TL;DR:** Blackstar Player is a fast, TV-optimized IPTV player for Android boxes. It supports M3U
+> playlists and Xtream Codes (with multi-DNS failover), Live/Movies/Series, a scrollable EPG guide,
+> Netflix-style profiles & recommendations, resume playback, true Chromecast, a built-in WireGuard VPN,
+> parental PIN, and IT/ES localization. **100% self-contained: no merchant, no account, no ads, no external
+> server.** It only talks to the IPTV provider *you* enter.
 
 ---
 
-## ✨ Caratteristiche
+## 📥 Download
 
-- **Tre modalità d'accesso**
-  - **Xtream Codes** con i tre fattori: **username · password · DNS server**
-  - **Multi-DNS con failover**: fino a 5 DNS per le stesse credenziali; se uno non risponde,
-    l'app passa automaticamente al successivo finché la lista si carica
-  - **Lista M3U / URL** (classica `get.php?...type=m3u_plus` o qualsiasi `.m3u`)
-  - Più **profili** salvati, con cambio rapido dalle Impostazioni
-- **Live TV · Film · Serie TV** con categorie, copertine e dettaglio stagioni/episodi
-- **Continua a guardare**: film ed episodi ricordano il **punto esatto** (salvato in locale) e
-  riprendono da lì; barra di avanzamento in Home e sugli episodi
-- **Ricerca intelligente**: suggerimenti automatici mentre scrivi **+ titoli correlati / consigliati**
-  (ricerca con debounce, ottimizzata per **liste molto pesanti**)
-- **Home con consigli** ("Continua a guardare", "Consigliati per te", "Preferiti")
-- **Bilingue Italiano / Español**: tutta l'interfaccia si converte; lingua iniziale dal dispositivo,
-  cambiabile dalle Impostazioni
-- **Riproduttore selezionabile**: interno, **MX Player**, **VLC** o "chiedi sempre" (player esterno via intent)
-- **Multiutente**: profili stile Netflix con selezione all'avvio; ognuno con preferiti, cronologia,
-  "Continua a guardare" e consigli propri
-- **Consigli intelligenti** (algoritmo semplice): impara i tuoi gusti dai generi che guardi e propone
-  righe "Perché hai guardato…" e "Perché ti piacciono…"; nella ricerca mostra "Altri {genere}"
-- **Guida TV (EPG a griglia)**: vera griglia con **fascia oraria scorrevole**, colonna canali fissa,
-  blocchi programma posizionati per orario e indicatore "adesso"
-- **Profili con avatar colorati selezionabili**
-- **EPG / Now-Next**: programma "In onda" e "A seguire" sui canali Live (Xtream `get_short_epg`)
-- **Controllo parentale**: PIN a 4 cifre che nasconde i contenuti per adulti finché non sblocchi
-- **Trasmetti su TV**: apre la condivisione schermo di Android per vedere l'app sul televisore (mirroring)
-- **Icona e splash con il logo Blackstar reale** (anello aperto) tinto viola→magenta su nero
-- **Zapping con barra numerica**: digita il numero del canale per saltarci direttamente
-- **Modalità sopravvivenza**: ritenta automaticamente formati/stream alternativi se un canale cade
-- **Player** con play/pausa, formato immagine (Adatta/Riempi/Estendi), preferiti e cambio canale Live
-- **Ottimizzato per il telecomando** (D-pad): navigazione spaziale a fuoco, tasti freccia/OK/Indietro,
-  tasti numerici e canale +/−. Funziona anche al tatto.
-- **Veloce**: cache dei contenuti su **file locale** (riapertura istantanea anche con liste enormi,
-  senza limiti di dimensione), liste virtualizzate, motore Hermes, nuova architettura RN.
-- **Tema Blackstar**: nero profondo + accento **viola/magenta**, tipografia leggibile a distanza.
+➡️ **[Scarica l'ultimo APK](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest/download/blackstar-player.apk)** — installabile su qualsiasi box / TV Android e su telefono.
 
-## 🎨 Brand
+Installazione:
+1. Copia l'APK sul dispositivo (USB / rete) **oppure** `adb install -r blackstar-player.apk`.
+2. Abilita *Origini sconosciute* per il file manager, apri l'APK e installa.
+3. Al primo avvio scegli/crea un **profilo**, poi inserisci la tua **lista M3U** o le credenziali **Xtream** (DNS + user + password).
 
-Palette derivata da Blackstar Digital Studio: base nera (`#0A0A0F`) con accento "stella" viola→magenta
-(`#7C3AED → #A855F7 → #D946EF`). Vedi [`src/theme/tokens.ts`](src/theme/tokens.ts).
+> ⚠️ Blackstar Player **non fornisce alcun contenuto né alcun server**: riproduce solo la lista o
+> l'abbonamento che inserisci tu.
 
-## 🚀 Sviluppo
+---
+
+## ✨ Caratteristiche complete
+
+### 🎬 Contenuti e accesso
+- **Xtream Codes** con i tre fattori: **username · password · DNS server**.
+- **Multi-DNS con failover automatico**: fino a 5 DNS per le stesse credenziali; se uno non risponde,
+  l'app passa al successivo finché la lista si carica (e memorizza quello funzionante).
+- **Liste M3U / URL** (classiche `get.php?...type=m3u_plus` o qualsiasi `.m3u`).
+- **Profili multipli** (liste/abbonamenti) con cambio rapido.
+- **Live TV · Film · Serie TV** con categorie, copertine, dettaglio stagioni/episodi.
+
+### 👤 Multiutente (stile Netflix)
+- Più **profili utente** con **avatar colorati selezionabili** e schermata *"Chi sta guardando?"*.
+- Ogni profilo ha **preferiti, cronologia, "Continua a guardare" e consigli propri**.
+
+### 🧠 Consigli intelligenti
+- Algoritmo che **impara i tuoi gusti** dai generi che guardi.
+- Righe **"Perché hai guardato…"** e **"Perché ti piacciono…"**; nella ricerca **"Altri {genere}"**.
+- **Ricerca** con suggerimenti automatici mentre scrivi **+ titoli correlati** (debounce, ottimizzata per liste enormi).
+
+### ▶️ Riproduzione
+- **Continua a guardare**: film ed episodi ricordano il **punto esatto** e riprendono da lì (barra di avanzamento).
+- **Modalità sopravvivenza**: auto-retry su formati/stream alternativi se un canale cade.
+- **Riproduttore selezionabile**: interno, **MX Player**, **VLC** o "chiedi sempre" (player esterno via intent).
+- Formato immagine (Adatta / Riempi / Estendi), formato Live (TS / M3U8), preferiti, zapping a barra numerica.
+
+### 📺 Guida TV (EPG)
+- **Griglia EPG** con **fascia oraria scorrevole**, colonna canali fissa, blocchi programma per orario e indicatore "adesso".
+- **Now / Next** ("In onda" e "A seguire") sui canali Live (Xtream `get_short_epg`).
+- **Ordine categorie**: predefinito / **alfabetico** / **più viste** / **manuale** (riordino su-giù).
+
+### 📡 Trasmissione su TV
+- **Chromecast vero** (Google Cast SDK): invia lo stream a una TV/Chromecast con i controlli.
+- **Condivisione schermo** (mirroring) di Android come alternativa per i box senza Google Play Services.
+
+### 🛡️ Privacy e sicurezza
+- **VPN integrata (WireGuard)**: importa un config `.conf`, connetti e **maschera il tuo IP** su tutto il
+  dispositivo. Scorciatoie ai provider gratuiti (con avviso che sono di terzi).
+- **Controllo parentale** con **PIN a 4 cifre**: nasconde i contenuti per adulti finché non sblocchi.
+
+### ⚡ Prestazioni e UX
+- **Velocissima**: cache dei contenuti su **file locale** (riapertura istantanea anche con liste enormi),
+  liste virtualizzate, motore **Hermes**, **nuova architettura** React Native.
+- **Ottimizzata per TV e telecomando** (D-pad): navigazione a fuoco, tasti freccia/OK/Indietro, numeri,
+  canale +/−; categoria **LEANBACK_LAUNCHER** per Android TV.
+- **Responsive**: su telefono l'interfaccia si adatta (scala, niente fuoco "appiccicato", griglie corrette).
+- **Bilingue Italiano / Español** (lingua iniziale dal dispositivo, cambiabile dalle Impostazioni).
+- **Tema Blackstar**: nero profondo + accento **viola → magenta**, con il logo reale del brand.
+
+---
+
+## 🕹️ Uso rapido
+
+| Azione | Come |
+|---|---|
+| Accedere | Profilo → *Accedi* con **Xtream** (DNS/user/password) o **M3U** |
+| Cambiare profilo utente | Impostazioni → **Utenti** → *Cambia profilo* |
+| Guida programmi | Scheda **Guida** |
+| Attivare la VPN | Impostazioni → **VPN / Anonimato** → *Importa config WireGuard* → *Connetti* |
+| Trasmettere su TV | Pulsante **Cast** nel player (Chromecast) o Impostazioni → *Trasmissione* (mirroring) |
+| Blocco adulti | Impostazioni → **Controllo parentale** (PIN) |
+| Ordine categorie | Impostazioni → **Ordine categorie** |
+
+---
+
+## 🏗️ Sviluppo & build
+
+Progetto **Expo SDK 56** (React Native, TypeScript, expo-router, Hermes, nuova architettura).
 
 ```bash
 npm install
-npx expo start        # apre il dev server (Expo Go / dev build / web)
-npm run android       # avvia su emulatore/dispositivo Android
+npx expo start            # dev server
+npm run android           # avvia su dispositivo/emulatore
 ```
 
-Richiede Node 20+. Il progetto usa **Expo SDK 56** ed **expo-router**.
-
-## 📦 Generare l'APK installabile
-
-L'app è **autonoma**: l'APK si costruisce con Expo prebuild + Gradle, **senza EAS e senza account Expo**.
-
-### A) In automatico su GitHub (consigliato)
-Ad ogni push su `main`, la GitHub Action [`build-apk.yml`](.github/workflows/build-apk.yml) genera
-`blackstar-player.apk` come **artifact** e lo pubblica nella **Release `latest`**. Puoi anche lanciarla a
-mano da *Actions → Build Android APK → Run workflow*.
-
-### B) In locale
+**Build dell'APK (senza EAS, senza account Expo):**
 ```bash
 npx expo prebuild --platform android --no-install
-cd android
-./gradlew assembleRelease        # Windows: .\gradlew.bat assembleRelease
-# APK in: android/app/build/outputs/apk/release/app-release.apk
+cd android && ./gradlew assembleRelease
+# APK: android/app/build/outputs/apk/release/app-release.apk
 ```
 
-Installa l'APK sul box: `adb install -r blackstar-player.apk` oppure copialo sul dispositivo e aprilo.
+Oppure: la **GitHub Action** [`build-apk.yml`](.github/workflows/build-apk.yml) compila l'APK ad ogni push su
+`main` e lo pubblica nella **Release `latest`** (prebuild + Gradle, solo ABI `arm64-v8a` + `armeabi-v7a`).
 
-## 🏗️ Struttura
+### Stack
+`Expo SDK 56` · `React Native 0.85 (new arch)` · `expo-router` · `expo-video` · `zustand` ·
+`react-native-google-cast` · `react-native-wireguard-vpn` · `expo-file-system` · `expo-localization`.
 
+### Struttura
 ```
 src/
-  app/                 # rotte expo-router (onboarding, tabs, player, serie)
-    (tabs)/            # Home · Live · Film · Serie · Cerca · Impostazioni
-  components/          # UI kit, card, rail, browser, nav rail
-  lib/                 # parser M3U, client Xtream, ricerca, storage, tipi
-  store/               # stato globale (zustand)
-  tv/                  # motore di fuoco D-pad + bridge tasti telecomando
-  theme/               # design token Blackstar
-plugins/               # config plugin: tasti TV + Android TV/leanback
+  app/            rotte expo-router (onboarding, tabs, player, serie, vpn, categorie, profili)
+    (tabs)/       Home · Live · Film · Serie · Guida · Cerca · Impostazioni
+  components/     UI kit, card, rail, browser, nav, EPG, VPN, PIN
+  lib/            M3U, Xtream, EPG, ricerca, consigli, categorie, cast, VPN/WireGuard, storage
+  store/          stato globale (zustand) + VPN
+  tv/             motore di fuoco D-pad + bridge tasti telecomando
+  theme/          design token Blackstar
+plugins/          config plugin: tasti TV + Android TV/leanback
 ```
-
-## 🔒 Privacy
-
-Nessun backend, nessun servizio esterno, nessun tracciamento. Le credenziali e le liste sono salvate
-solo localmente (AsyncStorage) sul dispositivo.
 
 ---
 
+## 🔒 Privacy
+
+Nessun backend, nessun servizio esterno, nessun tracciamento, nessuna pubblicità. Credenziali, liste,
+preferiti e cronologia sono salvati **solo localmente** sul dispositivo. L'unico server con cui l'app
+comunica è quello del **tuo** provider IPTV (e, se la attivi tu, la VPN che scegli tu).
+
+---
+
+<div align="center">
+
 © Blackstar Digital Studio — **Made in Italy** 🇮🇹
+
+</div>
