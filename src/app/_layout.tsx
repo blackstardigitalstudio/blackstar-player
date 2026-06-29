@@ -41,6 +41,7 @@ export default function RootLayout() {
               }}
             >
               <Stack.Screen name="index" />
+              <Stack.Screen name="device-setup" />
               <Stack.Screen name="onboarding" />
               <Stack.Screen name="profiles" />
               <Stack.Screen name="(tabs)" />

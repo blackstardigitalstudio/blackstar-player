@@ -45,10 +45,10 @@ export const gradients = {
 
 import { Dimensions } from 'react-native';
 import * as Device from 'expo-device';
+import { readDeviceMode } from '@/lib/deviceMode';
 
 // Phones get a compact scale; TV / box / tablet keep the 10-foot sizing.
-// Uses expo-device first (reliable on Android TV), with a conservative
-// size fallback that NEVER classifies a TV as compact.
+// The user's explicit TV/Phone choice (if any) wins over auto-detection.
 function isCompactDevice(): boolean {
   try {
     const dt = Device.deviceType;
@@ -58,7 +58,13 @@ function isCompactDevice(): boolean {
   const { width, height } = Dimensions.get('window');
   return Math.min(width, height) < 480 && Math.max(width, height) < 820;
 }
-export const compact = isCompactDevice();
+function resolveCompact(): boolean {
+  const choice = readDeviceMode();
+  if (choice === 'phone') return true;
+  if (choice === 'tv') return false;
+  return isCompactDevice();
+}
+export const compact = resolveCompact();
 const S = compact ? 0.82 : 1;
 const r = (n: number) => Math.round(n * S);
 

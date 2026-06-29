@@ -5,8 +5,10 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { PinModal } from '@/components/PinModal';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { reloadAppAsync } from 'expo';
 import { useStore, type PlayerMode } from '@/store/useStore';
 import { openCastSettings } from '@/lib/cast';
+import { readDeviceMode, writeDeviceMode } from '@/lib/deviceMode';
 import { useT } from '@/i18n';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -96,6 +98,14 @@ export default function Settings() {
   const castToTv = async () => {
     const ok = await openCastSettings();
     if (!ok) Alert.alert('Blackstar Player', t('cast.notSupported'));
+  };
+
+  const cycleDeviceMode = async () => {
+    const next = readDeviceMode() === 'phone' ? 'tv' : 'phone';
+    writeDeviceMode(next);
+    try {
+      await reloadAppAsync();
+    } catch {}
   };
 
   const aspectLabel = { contain: t('set.aspectContain'), cover: t('set.aspectCover'), fill: t('set.aspectFill') }[s.settings.aspectMode];
@@ -190,6 +200,12 @@ export default function Settings() {
       </Section>
 
       <Section title={t('set.secInterface')}>
+        <Row
+          icon="tv"
+          label={t('set.deviceMode')}
+          value={readDeviceMode() === 'phone' ? t('dev.phone') : t('dev.tv')}
+          onPress={cycleDeviceMode}
+        />
         <Row
           icon="language"
           label={t('set.language')}

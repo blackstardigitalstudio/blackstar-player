@@ -32,7 +32,7 @@ export function Focusable({
   const idRef = useRef(focusKey || `f${++counter}`);
   const id = idRef.current;
   const [focused, setFocused] = useState(false);
-  const { register, unregister, requestFocus } = useRemote();
+  const { register, unregister, requestFocus, pointerMode, setPointerMode } = useRemote();
 
   const measure = useCallback(
     () =>
@@ -69,15 +69,21 @@ export function Focusable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Show the focus ring only when navigating by remote/keyboard, not after touch.
+  const ring = focused && !pointerMode;
+
   return (
     <Pressable
       ref={ref as any}
       disabled={disabled}
       onPress={onSelect}
-      onPressIn={() => requestFocus(id)}
-      style={({ pressed }) => [style, focused && (focusStyle ?? styles.focused), pressed && styles.pressed]}
+      onPressIn={() => {
+        setPointerMode(true);
+        requestFocus(id);
+      }}
+      style={({ pressed }) => [style, ring && (focusStyle ?? styles.focused), pressed && styles.pressed]}
     >
-      {typeof children === 'function' ? (children as any)(focused) : children}
+      {typeof children === 'function' ? (children as any)(ring) : children}
     </Pressable>
   );
 }

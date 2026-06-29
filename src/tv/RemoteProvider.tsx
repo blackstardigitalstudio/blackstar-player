@@ -27,12 +27,14 @@ interface Node {
 type KeyHandler = (key: RemoteKey) => boolean | void;
 
 interface RemoteCtx {
-  focusedId: string | null;
   register: (n: Node) => void;
   unregister: (id: string) => void;
   requestFocus: (id: string) => void;
   pushHandler: (h: KeyHandler) => () => void;
   dispatch: (key: RemoteKey) => void;
+  /** True when the last interaction was touch/pointer (hide the focus ring). */
+  pointerMode: boolean;
+  setPointerMode: (v: boolean) => void;
 }
 
 const Ctx = createContext<RemoteCtx | null>(null);
@@ -70,14 +72,22 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   const nodes = useRef(new Map<string, Node>());
   const handlers = useRef<KeyHandler[]>([]);
   const focusedRef = useRef<string | null>(null);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const pointerRef = useRef(false);
+  const [pointerMode, setPointerModeState] = useState(false);
 
+  const setPointerMode = useCallback((v: boolean) => {
+    if (pointerRef.current !== v) {
+      pointerRef.current = v;
+      setPointerModeState(v);
+    }
+  }, []);
+
+  // Focus is tracked via a ref + per-node callbacks (no context churn on moves).
   const setFocus = useCallback((id: string | null) => {
     const prev = focusedRef.current;
     if (prev === id) return;
     if (prev) nodes.current.get(prev)?.onFocusChange?.(false);
     focusedRef.current = id;
-    setFocusedId(id);
     if (id) nodes.current.get(id)?.onFocusChange?.(true);
   }, []);
 
@@ -92,10 +102,7 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   const unregister = useCallback(
     (id: string) => {
       nodes.current.delete(id);
-      if (focusedRef.current === id) {
-        focusedRef.current = null;
-        setFocusedId(null);
-      }
+      if (focusedRef.current === id) focusedRef.current = null;
     },
     [],
   );
@@ -136,6 +143,8 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
 
   const dispatch = useCallback(
     (key: RemoteKey) => {
+      // A remote/keyboard key means we're in "key" mode → show focus rings.
+      setPointerMode(false);
       // app-level handlers first (LIFO)
       for (let i = handlers.current.length - 1; i >= 0; i--) {
         if (handlers.current[i](key) === true) return;
@@ -147,7 +156,7 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
         if (id) nodes.current.get(id)?.onSelect?.();
       }
     },
-    [move],
+    [move, setPointerMode],
   );
 
   const pushHandler = useCallback((h: KeyHandler) => {
@@ -181,8 +190,8 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   const value = useMemo<RemoteCtx>(
-    () => ({ focusedId, register, unregister, requestFocus, pushHandler, dispatch }),
-    [focusedId, register, unregister, requestFocus, pushHandler, dispatch],
+    () => ({ register, unregister, requestFocus, pushHandler, dispatch, pointerMode, setPointerMode }),
+    [register, unregister, requestFocus, pushHandler, dispatch, pointerMode, setPointerMode],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
