@@ -44,15 +44,22 @@ export const gradients = {
 };
 
 import { Dimensions } from 'react-native';
+import * as Device from 'expo-device';
 
-// Phones (shortest side < 500dp) get a compact scale; TV/tablets keep the
-// 10-foot sizing. Based on the shortest side so it is stable across rotation.
-const shortestSide = (() => {
+// Phones get a compact scale; TV / box / tablet keep the 10-foot sizing.
+// Uses expo-device first (reliable on Android TV), with a conservative
+// size fallback that NEVER classifies a TV as compact.
+function isCompactDevice(): boolean {
+  try {
+    const dt = Device.deviceType;
+    if (dt === Device.DeviceType.PHONE) return true;
+    if (dt === Device.DeviceType.TV || dt === Device.DeviceType.TABLET || dt === Device.DeviceType.DESKTOP) return false;
+  } catch {}
   const { width, height } = Dimensions.get('window');
-  return Math.min(width, height);
-})();
-export const compact = shortestSide < 500;
-const S = compact ? 0.78 : 1;
+  return Math.min(width, height) < 480 && Math.max(width, height) < 820;
+}
+export const compact = isCompactDevice();
+const S = compact ? 0.82 : 1;
 const r = (n: number) => Math.round(n * S);
 
 export const radius = {
