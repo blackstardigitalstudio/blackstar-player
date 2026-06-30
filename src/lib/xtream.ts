@@ -35,7 +35,10 @@ export async function loadXtreamFailover(
     try {
       await xtreamLogin({ ...c, host });
       const content = await loadXtream({ ...c, host }, liveExt);
-      return { content, host };
+      // Only accept a host that actually returned content; otherwise try next.
+      if (content.live.length || content.movies.length || content.series.length) {
+        return { content, host };
+      }
     } catch {
       // try next DNS
     }
@@ -50,6 +53,17 @@ export function normalizeHost(input: string): string {
   return h.replace(/\/+$/, '');
 }
 
+/** fetch with a hard timeout so a dead DNS fails fast and failover can proceed. */
+async function fetchT(url: string, ms = 8000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { headers: { 'User-Agent': 'BlackstarPlayer' }, signal: ctrl.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 function apiBase(c: SourceConfig) {
   const host = normalizeHost(c.host || '');
   return `${host}/player_api.php?username=${encodeURIComponent(c.username || '')}&password=${encodeURIComponent(
@@ -59,7 +73,7 @@ function apiBase(c: SourceConfig) {
 
 async function api<T>(c: SourceConfig, action: string, extra = ''): Promise<T> {
   const url = `${apiBase(c)}&action=${action}${extra}`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'BlackstarPlayer' } });
+  const res = await fetchT(url);
   if (!res.ok) throw new Error(`Server Xtream: HTTP ${res.status}`);
   const txt = await res.text();
   if (!txt) return [] as unknown as T;
@@ -76,7 +90,7 @@ export async function xtreamLogin(c: SourceConfig): Promise<{ name: string; expD
   const url = `${host}/player_api.php?username=${encodeURIComponent(c.username || '')}&password=${encodeURIComponent(
     c.password || '',
   )}`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'BlackstarPlayer' } });
+  const res = await fetchT(url);
   if (!res.ok) throw new Error(`Connessione fallita (HTTP ${res.status}). Controlla il DNS server.`);
   const data = await res.json().catch(() => null);
   const auth = data?.user_info?.auth;
