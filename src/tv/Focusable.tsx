@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, focusRing, radius } from '@/theme/tokens';
+import { colors, compact, focusRing, radius } from '@/theme/tokens';
 import { useRemote, type Rect } from './RemoteProvider';
 
 let counter = 0;
@@ -69,8 +69,9 @@ export function Focusable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Show the focus ring only when navigating by remote/keyboard, not after touch.
-  const ring = focused && !pointerMode;
+  // TV: the focus ring is ALWAYS visible while focused (so you never lose your
+  // place with the remote). Phone: show it only when navigating by key, not touch.
+  const ring = compact ? focused && !pointerMode : focused;
 
   return (
     <Pressable

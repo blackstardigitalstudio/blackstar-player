@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRef } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { useT } from '@/i18n';
@@ -46,20 +47,31 @@ export function ContinueRail({ entries, onSelect }: { entries: ProgressEntry[]; 
   const t = useT();
   if (!entries.length) return null;
   const itemW = POSTER_W + spacing.md;
+  const ref = useRef<FlatList>(null);
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <Txt variant="h3" style={{ marginLeft: spacing.lg, marginBottom: spacing.sm }}>
         {t('home.continue')}
       </Txt>
       <FlatList
+        ref={ref}
         horizontal
         data={entries}
         keyExtractor={(e) => e.key}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
         getItemLayout={(_, index) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
-        renderItem={({ item }) => (
-          <Focusable onSelect={() => onSelect(item)} focusStyle={{}}>
+        onScrollToIndexFailed={() => {}}
+        renderItem={({ item, index }) => (
+          <Focusable
+            onSelect={() => onSelect(item)}
+            onFocus={() => {
+              try {
+                ref.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
+              } catch {}
+            }}
+            focusStyle={{}}
+          >
             {(f) => <Card entry={item} focused={f} />}
           </Focusable>
         )}
