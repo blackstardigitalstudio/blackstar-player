@@ -207,9 +207,12 @@ export const useStore = create<State>((set, get) => ({
   },
 
   addSource: async (s, content) => {
-    const sources = [...get().sources.filter((x) => x.id !== s.id), s];
+    // Upsert: edit keeps its position in the list, add appends.
+    const exists = get().sources.some((x) => x.id === s.id);
+    const sources = exists ? get().sources.map((x) => (x.id === s.id ? s : x)) : [...get().sources, s];
     await setJSON(KEYS.sources, sources);
     await setJSON(KEYS.activeSource, s.id);
+    await removeContentCache(s.id);
     set({ sources, activeId: s.id, content: content ?? EMPTY, error: null });
     if (content) await cacheContent(s.id, content);
     else await get().refresh(true);

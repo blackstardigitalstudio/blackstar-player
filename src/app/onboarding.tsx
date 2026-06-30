@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
@@ -17,7 +17,10 @@ const MAX_DNS = 5;
 export default function Onboarding() {
   const router = useRouter();
   const t = useT();
+  const params = useLocalSearchParams<{ sourceId?: string }>();
+  const editId = params.sourceId;
   const addSource = useStore((s) => s.addSource);
+  const sources = useStore((s) => s.sources);
   const liveExt = useStore((s) => s.settings.liveExt);
 
   const [mode, setMode] = useState<Mode>('xtream');
@@ -29,6 +32,22 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Edit mode: prefill the form from the existing source.
+  useEffect(() => {
+    if (!editId) return;
+    const src = sources.find((s) => s.id === editId);
+    if (!src) return;
+    setMode(src.type);
+    setName(src.name);
+    if (src.type === 'm3u') setM3uUrl(src.m3uUrl || '');
+    else {
+      setHosts(src.hosts && src.hosts.length ? src.hosts : [src.host || '']);
+      setUsername(src.username || '');
+      setPassword(src.password || '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
+
   const setHostAt = (i: number, val: string) => setHosts((h) => h.map((x, j) => (j === i ? val : x)));
   const addHost = () => setHosts((h) => (h.length < MAX_DNS ? [...h, ''] : h));
   const removeHost = (i: number) => setHosts((h) => h.filter((_, j) => j !== i));
@@ -37,7 +56,8 @@ export default function Onboarding() {
     setError(null);
     setBusy(true);
     try {
-      const id = `src_${Date.now()}`;
+      const id = editId || `src_${Date.now()}`;
+      const createdAt = sources.find((s) => s.id === id)?.createdAt ?? Date.now();
       if (mode === 'm3u') {
         if (!m3uUrl.trim()) throw new Error(t('ob.errM3uUrl'));
         const res = await fetch(m3uUrl.trim(), { headers: { 'User-Agent': 'BlackstarPlayer' } });
@@ -51,7 +71,7 @@ export default function Onboarding() {
           type: 'm3u',
           name: name.trim() || t('ob.m3uDefault'),
           m3uUrl: m3uUrl.trim(),
-          createdAt: Date.now(),
+          createdAt,
         };
         await addSource(src, content);
       } else {
@@ -67,7 +87,7 @@ export default function Onboarding() {
           hosts: cleanHosts,
           username: username.trim(),
           password: password.trim(),
-          createdAt: Date.now(),
+          createdAt,
         };
         // Tries each DNS in order until one authenticates and loads.
         try {
@@ -78,7 +98,8 @@ export default function Onboarding() {
           throw new Error(t('ob.errGeneric'));
         }
       }
-      router.replace('/(tabs)/home');
+      if (editId) router.back();
+      else router.replace('/(tabs)/home');
     } catch (e: any) {
       setError(e?.message || t('ob.errGeneric'));
     } finally {
@@ -89,6 +110,11 @@ export default function Onboarding() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
+        {editId ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
+          </View>
+        ) : null}
         <BrandMark size={34} />
         <Txt variant="small" style={{ marginTop: 4, marginBottom: spacing.lg }}>
           {t('ob.tagline')}
@@ -153,7 +179,7 @@ export default function Onboarding() {
           ) : null}
 
           <View style={{ marginTop: spacing.sm }}>
-            <PrimaryButton label={busy ? t('ob.connecting') : t('ob.login')} icon="log-in" onPress={busy ? () => {} : submit} autoFocus />
+            <PrimaryButton label={busy ? t('ob.connecting') : editId ? t('ob.save') : t('ob.login')} icon={editId ? 'save' : 'log-in'} onPress={busy ? () => {} : submit} autoFocus />
           </View>
         </View>
 

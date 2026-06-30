@@ -142,15 +142,24 @@ export default function Settings() {
 
       <Section title={t('set.secSources')}>
         {s.sources.map((src) => (
-          <Row
-            key={src.id}
-            icon={src.id === s.activeId ? 'radio-button-on' : 'radio-button-off'}
-            label={`${src.name}  ·  ${src.type === 'xtream' ? 'Xtream' : 'M3U'}`}
-            value={src.id === s.activeId ? t('set.active') : t('set.activate')}
-            onPress={() => s.setActive(src.id)}
-          />
+          <View key={src.id} style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Row
+                icon={src.id === s.activeId ? 'radio-button-on' : 'radio-button-off'}
+                label={`${src.name}  ·  ${src.type === 'xtream' ? 'Xtream' : 'M3U'}`}
+                value={src.id === s.activeId ? t('set.active') : t('set.activate')}
+                onPress={() => s.setActive(src.id)}
+              />
+            </View>
+            <Focusable onSelect={() => router.push({ pathname: '/onboarding', params: { sourceId: src.id } })} style={styles.editBtn} focusStyle={styles.rowFocus}>
+              {(f) => <Ionicons name="create-outline" size={20} color={f ? colors.accent : colors.textMuted} />}
+            </Focusable>
+          </View>
         ))}
         <Row icon="add-circle" label={t('set.addProfile')} onPress={() => router.push('/onboarding')} />
+        {active ? (
+          <Row icon="create" label={t('set.editSource')} onPress={() => router.push({ pathname: '/onboarding', params: { sourceId: active.id } })} />
+        ) : null}
         {active ? (
           <Row icon="trash" label={t('set.removeProfile', { name: active.name })} danger onPress={() => s.removeSource(active.id)} />
         ) : null}
@@ -285,5 +294,6 @@ const styles = StyleSheet.create({
   },
   row: { borderRadius: radius.md, marginHorizontal: 6, marginVertical: 2 },
   rowFocus: { backgroundColor: colors.surfaceHi },
+  editBtn: { padding: 12, borderRadius: radius.md, marginRight: 6 },
   rowInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 14, paddingHorizontal: spacing.md },
 });

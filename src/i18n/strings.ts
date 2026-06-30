@@ -35,6 +35,7 @@ const it: Dict = {
   'ob.addDns': 'Aggiungi un altro DNS',
   'ob.dnsHint': 'Se un DNS non risponde, l’app passa automaticamente al successivo.',
   'ob.login': 'Accedi',
+  'ob.save': 'Salva modifiche',
   'ob.connecting': 'Connessione…',
   'ob.disclaimer':
     'Blackstar Player non fornisce contenuti né server: usa solo la lista o l’abbonamento che inserisci tu. Nessun dato lascia il dispositivo.',
@@ -161,6 +162,7 @@ const it: Dict = {
   'prof.create': 'Crea profilo',
   'set.secUsers': 'Utenti',
   'set.secSources': 'Liste e abbonamenti',
+  'set.editSource': 'Modifica lista (DNS, credenziali)',
   'set.switchProfile': 'Cambia profilo',
   'set.activeProfile': 'Profilo attivo: {name}',
   'set.removeProfileUser': 'Rimuovi profilo “{name}”',
@@ -232,6 +234,7 @@ const es: Dict = {
   'ob.addDns': 'Añadir otro DNS',
   'ob.dnsHint': 'Si un DNS no responde, la app pasa automáticamente al siguiente.',
   'ob.login': 'Entrar',
+  'ob.save': 'Guardar cambios',
   'ob.connecting': 'Conectando…',
   'ob.disclaimer':
     'Blackstar Player no ofrece contenidos ni servidores: usa solo la lista o la suscripción que introduces tú. Ningún dato sale del dispositivo.',
@@ -358,6 +361,7 @@ const es: Dict = {
   'prof.create': 'Crear perfil',
   'set.secUsers': 'Usuarios',
   'set.secSources': 'Listas y suscripciones',
+  'set.editSource': 'Editar lista (DNS, credenciales)',
   'set.switchProfile': 'Cambiar perfil',
   'set.activeProfile': 'Perfil activo: {name}',
   'set.removeProfileUser': 'Eliminar perfil “{name}”',
