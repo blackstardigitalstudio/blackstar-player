@@ -160,23 +160,37 @@ export function Field({
   autoCapitalize?: 'none' | 'sentences';
 }) {
   const [focused, setFocused] = React.useState(false);
+  const inputRef = React.useRef<TextInput>(null);
   return (
-    <View style={{ gap: 6 }}>
-      <Txt variant="small">{label}</Txt>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textFaint}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={false}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[styles.input, focused && { borderColor: colors.borderFocus }]}
-      />
-    </View>
+    <Focusable
+      onSelect={() => inputRef.current?.focus()}
+      onFocus={() => inputRef.current?.focus()}
+      style={{ borderRadius: radius.md }}
+      focusStyle={{}}
+    >
+      {(ring, focusSelf) => (
+        <View style={{ gap: 6 }}>
+          <Txt variant="small">{label}</Txt>
+          <TextInput
+            ref={inputRef}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textFaint}
+            secureTextEntry={secureTextEntry}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            autoCorrect={false}
+            onFocus={() => {
+              setFocused(true);
+              focusSelf();
+            }}
+            onBlur={() => setFocused(false)}
+            style={[styles.input, (focused || ring) && { borderColor: colors.borderFocus }]}
+          />
+        </View>
+      )}
+    </Focusable>
   );
 }
 

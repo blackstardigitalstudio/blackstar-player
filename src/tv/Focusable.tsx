@@ -14,8 +14,8 @@ interface Props {
   focusKey?: string;
   autoFocus?: boolean;
   disabled?: boolean;
-  /** Render prop receives current focus state, or pass plain children. */
-  children: React.ReactNode | ((focused: boolean) => React.ReactNode);
+  /** Render prop receives focus state + a focusSelf() to sync engine focus from a native input. */
+  children: React.ReactNode | ((focused: boolean, focusSelf: () => void) => React.ReactNode);
 }
 
 export function Focusable({
@@ -84,7 +84,7 @@ export function Focusable({
       }}
       style={({ pressed }) => [style, ring && (focusStyle ?? styles.focused), pressed && styles.pressed]}
     >
-      {typeof children === 'function' ? (children as any)(ring) : children}
+      {typeof children === 'function' ? (children as any)(ring, () => requestFocus(id)) : children}
     </Pressable>
   );
 }
