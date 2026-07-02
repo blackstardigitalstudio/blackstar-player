@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { FocusList } from '@/tv/FocusList';
 import { spacing } from '@/theme/tokens';
 import type { MediaItem } from '@/lib/types';
 import { CARD_H_POSTER, CARD_H_TILE, ChannelCard, PosterCard, POSTER_W, TILE_W } from './Card';
@@ -39,22 +40,18 @@ export function Rail({
       <Txt variant="h3" style={{ marginLeft: spacing.lg, marginBottom: spacing.sm }}>
         {title}
       </Txt>
-      <FlatList
+      <FocusList
         ref={ref}
         horizontal
         data={items}
-        keyExtractor={(i) => i.id}
+        keyExtractor={(i: MediaItem) => i.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={11}
-        removeClippedSubviews={false}
-        getItemLayout={(_, index) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
-        onScrollToIndexFailed={(info) => {
+        getItemLayout={(_: any, index: number) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
+        onScrollToIndexFailed={(info: any) => {
           ref.current?.scrollToOffset({ offset: spacing.lg + itemW * info.index, animated: false });
         }}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index }: { item: MediaItem; index: number }) => (
           <Focusable onSelect={() => onSelect(item)} onFocus={() => scrollTo(index)} focusStyle={EMPTY}>
             {(f) => <CardFor item={item} focused={f} variant={variant} />}
           </Focusable>
@@ -109,34 +106,30 @@ export function MediaGrid({
   };
 
   return (
-    <FlatList
+    <FocusList
       ref={ref}
-      onLayout={(e) => {
+      onLayout={(e: any) => {
         setW(e.nativeEvent.layout.width);
         listH.current = e.nativeEvent.layout.height;
       }}
-      onScroll={(e) => {
+      onScroll={(e: any) => {
         offY.current = e.nativeEvent.contentOffset.y;
       }}
-      scrollEventThrottle={16}
       data={items}
       key={`${variant}-${cols}`}
       numColumns={cols}
-      keyExtractor={(i) => i.id}
+      keyExtractor={(i: MediaItem) => i.id}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
       columnWrapperStyle={cols > 1 ? { gap: spacing.md, paddingHorizontal: spacing.lg } : undefined}
       contentContainerStyle={{ gap: spacing.md, paddingTop: PAD_TOP, paddingBottom: spacing.xxl }}
       initialNumToRender={cols * 4}
       maxToRenderPerBatch={cols * 4}
-      updateCellsBatchingPeriod={40}
-      windowSize={11}
-      removeClippedSubviews={false}
-      getItemLayout={(_, index) => ({ length: rowH, offset: PAD_TOP + rowH * Math.floor(index / cols), index })}
-      onScrollToIndexFailed={(info) => {
+      getItemLayout={(_: any, index: number) => ({ length: rowH, offset: PAD_TOP + rowH * Math.floor(index / cols), index })}
+      onScrollToIndexFailed={(info: any) => {
         ref.current?.scrollToOffset({ offset: Math.floor(info.index / cols) * rowH, animated: false });
       }}
-      renderItem={({ item, index }) => (
+      renderItem={({ item, index }: { item: MediaItem; index: number }) => (
         <Focusable onSelect={() => onSelect(item)} onFocus={() => scrollTo(index)} focusStyle={EMPTY}>
           {(f) => <CardFor item={item} focused={f} variant={variant} />}
         </Focusable>

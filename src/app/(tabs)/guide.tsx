@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { Empty, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { FocusList } from '@/tv/FocusList';
 import { useVisibleContent } from '@/lib/content';
 import { usePlayback } from '@/lib/playback';
 import { useStore } from '@/store/useStore';
@@ -163,19 +164,15 @@ export default function Guide() {
         {/* Fixed channel column */}
         <View style={{ width: CHAN_W }}>
           <View style={{ height: HEADER_H, borderBottomWidth: 1, borderBottomColor: colors.border }} />
-          <FlatList
+          <FocusList
             ref={leftRef}
             data={content.live}
-            keyExtractor={(c) => c.id}
+            keyExtractor={(c: MediaItem) => c.id}
             style={{ height: listH }}
-            scrollEventThrottle={16}
-            onScroll={(e) => sync(rightRef, e.nativeEvent.contentOffset.y)}
+            onScroll={(e: any) => sync(rightRef, e.nativeEvent.contentOffset.y)}
             showsVerticalScrollIndicator={false}
-            getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
-            initialNumToRender={10}
-            windowSize={11}
-            removeClippedSubviews={false}
-            renderItem={({ item }) => (
+            getItemLayout={(_: any, index: number) => ({ length: ROW_H, offset: ROW_H * index, index })}
+            renderItem={({ item }: { item: MediaItem }) => (
               <View style={styles.chanRow}>
                 <ChannelCell channel={item} onPlay={() => play.open(item)} />
               </View>
@@ -187,19 +184,15 @@ export default function Guide() {
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View style={{ width: TIMELINE_W, height: gridH }}>
             <TimeHeader startSec={startSec} nowX={nowX} />
-            <FlatList
+            <FocusList
               ref={rightRef}
               data={content.live}
-              keyExtractor={(c) => c.id}
+              keyExtractor={(c: MediaItem) => c.id}
               style={{ height: listH }}
-              scrollEventThrottle={16}
-              onScroll={(e) => sync(leftRef, e.nativeEvent.contentOffset.y)}
+              onScroll={(e: any) => sync(leftRef, e.nativeEvent.contentOffset.y)}
               showsVerticalScrollIndicator={false}
-              getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
-              initialNumToRender={10}
-              windowSize={11}
-              removeClippedSubviews={false}
-              renderItem={({ item }) => <ProgramRow channel={item} source={source} startSec={startSec} onPlay={() => play.open(item)} />}
+              getItemLayout={(_: any, index: number) => ({ length: ROW_H, offset: ROW_H * index, index })}
+              renderItem={({ item }: { item: MediaItem }) => <ProgramRow channel={item} source={source} startSec={startSec} onPlay={() => play.open(item)} />}
             />
             {nowX >= 0 && nowX <= TIMELINE_W ? <View pointerEvents="none" style={[styles.nowLine, { left: nowX, height: listH, top: HEADER_H }]} /> : null}
           </View>

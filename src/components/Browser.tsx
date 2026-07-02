@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { FocusList } from '@/tv/FocusList';
 import { useT } from '@/i18n';
 import { useStore } from '@/store/useStore';
 import { sortCategories } from '@/lib/categories';
@@ -72,14 +73,14 @@ export function Browser({
         <Txt variant="h3" numberOfLines={1} style={{ paddingHorizontal: spacing.md, marginBottom: spacing.sm }}>
           {title}
         </Txt>
-        <FlatList
+        <FocusList
           ref={catRef}
           data={data}
-          keyExtractor={(c) => c.id}
+          keyExtractor={(c: any) => c.id}
           showsVerticalScrollIndicator={false}
-          getItemLayout={(_, index) => ({ length: CAT_ROW, offset: CAT_ROW * index, index })}
+          getItemLayout={(_: any, index: number) => ({ length: CAT_ROW, offset: CAT_ROW * index, index })}
           onScrollToIndexFailed={() => {}}
-          renderItem={({ item, index }) => (
+          renderItem={({ item, index }: any) => (
             <Chip label={item.name} active={sel === item.id} onPress={() => setSel(item.id)} onFocus={() => scrollCat(index)} />
           )}
         />

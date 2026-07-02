@@ -126,18 +126,17 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   // Re-home focus onto the spatially nearest surviving node in the active layer
   // (anchored to where focus just was), instead of dropping to null / node #0.
   const rehome = useCallback(async () => {
+    if (focusedRef.current) return; // already refocused meanwhile
     const layer = activeLayer();
     const candidates = Array.from(nodes.current.values()).filter((n) => n.layer === layer);
-    if (!candidates.length) {
-      setFocus(null);
-      return;
-    }
+    if (!candidates.length) return; // nothing to focus yet — watchdog will retry on next register
     const anchor = focusedCenterRef.current;
     if (!anchor) {
       setFocus(candidates[0].id);
       return;
     }
     const measured = await Promise.all(candidates.map(async (n) => ({ n, r: await n.measure() })));
+    if (focusedRef.current) return;
     let best: Node | null = null;
     let bestD = Infinity;
     for (const { n, r } of measured) {
@@ -152,16 +151,31 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     setFocus(best ? best.id : candidates[0].id);
   }, [setFocus]);
 
+  // Watchdog: schedule a re-home AFTER the current commit settles, so it sees the
+  // final mounted set (post-virtualization / post-category-switch). Guarantees
+  // focus is never left null while focusable nodes exist → the cursor is never lost.
+  const rehomeScheduled = useRef(false);
+  const scheduleRehome = useCallback(() => {
+    if (rehomeScheduled.current) return;
+    rehomeScheduled.current = true;
+    const run = () => {
+      rehomeScheduled.current = false;
+      rehome();
+    };
+    if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(run);
+    else setTimeout(run, 0);
+  }, [rehome]);
+
   const unregister = useCallback(
     (id: string) => {
       const wasFocused = focusedRef.current === id;
       nodes.current.delete(id);
       if (wasFocused) {
-        focusedRef.current = null;
-        rehome();
+        setFocus(null); // clear the (now-gone) ring immediately…
+        scheduleRehome(); // …then re-home once the tree settles
       }
     },
-    [rehome],
+    [setFocus, scheduleRehome],
   );
 
   const requestFocus = useCallback(
