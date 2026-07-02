@@ -43,6 +43,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Android refuses to install an update APK whose versionCode is not higher
+      # than the installed one. Tie it to the (monotonic) build number so every
+      # published build supersedes the previous — the in-app updater then works.
+      - name: Set Android versionCode
+        run: |
+          node -e "const fs=require('fs');const p='./app.json';const j=require(p);j.expo.android.versionCode=${{ github.run_number }};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');console.log('versionCode =', j.expo.android.versionCode)"
+
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --no-install
 
@@ -58,6 +65,15 @@ jobs:
       - name: Rename APK
         run: cp android/app/build/outputs/apk/release/app-release.apk blackstar-player.apk
 
+      # Manifest used by the in-app auto-updater. Stable URL:
+      # https://github.com/<repo>/releases/latest/download/version.json
+      - name: Make version.json
+        run: |
+          VER=$(node -p "require('./app.json').expo.version")
+          printf '{"version":"%s","apk":"https://github.com/%s/releases/latest/download/blackstar-player.apk"}\n' \
+            "$VER" "${{ github.repository }}" > version.json
+          cat version.json
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -71,7 +87,10 @@ jobs:
         with:
           tag_name: latest
           name: Blackstar Player (latest build)
-          files: blackstar-player.apk
+          files: |
+            blackstar-player.apk
+            version.json
           body: |
             Build automatica dell'APK installabile su box Android / Android TV.
+            Aggiornamento automatico in-app dalle Release di questo repo.
             Nessun account, nessun server esterno. Made in Italy 🇮🇹

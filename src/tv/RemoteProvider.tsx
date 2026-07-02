@@ -128,7 +128,33 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     [setFocus],
   );
 
+  // Serialize moves: measuring is async (measureInWindow), so overlapping moves
+  // could read stale rects mid-scroll and pick the wrong neighbour. While one is
+  // resolving we remember only the latest pending direction and run it after.
+  const movingRef = useRef(false);
+  const pendingDirRef = useRef<RemoteKey | null>(null);
+
   const move = useCallback(
+    async (dir: RemoteKey) => {
+      if (movingRef.current) {
+        pendingDirRef.current = dir;
+        return;
+      }
+      movingRef.current = true;
+      try {
+        await moveOnce(dir);
+      } finally {
+        movingRef.current = false;
+        const next = pendingDirRef.current;
+        pendingDirRef.current = null;
+        if (next) move(next);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const moveOnce = useCallback(
     async (dir: RemoteKey) => {
       const list = Array.from(nodes.current.values());
       if (!list.length) return;

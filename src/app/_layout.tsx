@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RemoteProvider } from '@/tv/RemoteProvider';
+import { UpdateGate } from '@/components/UpdateGate';
 import { useStore } from '@/store/useStore';
 import { colors } from '@/theme/tokens';
 
@@ -41,7 +42,6 @@ export default function RootLayout() {
               }}
             >
               <Stack.Screen name="index" />
-              <Stack.Screen name="device-setup" />
               <Stack.Screen name="onboarding" />
               <Stack.Screen name="profiles" />
               <Stack.Screen name="(tabs)" />
@@ -50,6 +50,7 @@ export default function RootLayout() {
               <Stack.Screen name="categories" />
               <Stack.Screen name="vpn" />
             </Stack>
+            <UpdateGate />
           </RemoteProvider>
         </ThemeProvider>
       </SafeAreaProvider>

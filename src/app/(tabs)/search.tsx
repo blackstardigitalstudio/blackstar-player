@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { Rail } from '@/components/Rail';
@@ -20,6 +20,7 @@ export default function Search() {
   const [q, setQ] = useState('');
   const [dq, setDq] = useState(''); // debounced query — keeps typing smooth on huge lists
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDq(q), 220);
@@ -56,16 +57,30 @@ export default function Search() {
     <View style={{ flex: 1 }}>
       <View style={styles.searchBar}>
         <Ionicons name="search" size={22} color={colors.textMuted} />
-        <TextInput
-          value={q}
-          onChangeText={setQ}
-          placeholder={t('search.ph')}
-          placeholderTextColor={colors.textFaint}
-          autoCorrect={false}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={[styles.input, focused && { borderColor: colors.borderFocus }]}
-        />
+        <Focusable
+          autoFocus
+          onSelect={() => inputRef.current?.focus()}
+          onFocus={() => inputRef.current?.focus()}
+          style={{ flex: 1 }}
+          focusStyle={{}}
+        >
+          {(ring, focusSelf) => (
+            <TextInput
+              ref={inputRef}
+              value={q}
+              onChangeText={setQ}
+              placeholder={t('search.ph')}
+              placeholderTextColor={colors.textFaint}
+              autoCorrect={false}
+              onFocus={() => {
+                setFocused(true);
+                focusSelf();
+              }}
+              onBlur={() => setFocused(false)}
+              style={[styles.input, (focused || ring) && { borderColor: colors.borderFocus }]}
+            />
+          )}
+        </Focusable>
         {q ? (
           <Focusable onSelect={() => setQ('')} style={styles.clear} focusStyle={{ borderColor: colors.borderFocus }}>
             <Ionicons name="close" size={18} color={colors.textMuted} />

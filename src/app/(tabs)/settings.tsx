@@ -6,10 +6,10 @@ import { PinModal } from '@/components/PinModal';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
-import { reloadAppAsync } from 'expo';
 import { useStore, type PlayerMode } from '@/store/useStore';
 import { openCastSettings } from '@/lib/cast';
-import { readDeviceMode, writeDeviceMode } from '@/lib/deviceMode';
+import { requestUpdateCheck } from '@/lib/updater';
+import { APP_VERSION } from '@/lib/version';
 import { useT } from '@/i18n';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -99,14 +99,6 @@ export default function Settings() {
   const castToTv = async () => {
     const ok = await openCastSettings();
     if (!ok) Alert.alert('Blackstar Player', t('cast.notSupported'));
-  };
-
-  const cycleDeviceMode = async () => {
-    const next = readDeviceMode() === 'phone' ? 'tv' : 'phone';
-    writeDeviceMode(next);
-    try {
-      await reloadAppAsync();
-    } catch {}
   };
 
   const aspectLabel = { contain: t('set.aspectContain'), cover: t('set.aspectCover'), fill: t('set.aspectFill') }[s.settings.aspectMode];
@@ -211,12 +203,6 @@ export default function Settings() {
 
       <Section title={t('set.secInterface')}>
         <Row
-          icon="tv"
-          label={t('set.deviceMode')}
-          value={readDeviceMode() === 'phone' ? t('dev.phone') : t('dev.tv')}
-          onPress={cycleDeviceMode}
-        />
-        <Row
           icon="language"
           label={t('set.language')}
           value={s.settings.language === 'it' ? 'Italiano' : 'Español'}
@@ -274,7 +260,7 @@ export default function Settings() {
       </Section>
 
       <Section title={t('set.secInfo')}>
-        <Row icon="star" label="Blackstar Player" value="v1.0.0" onPress={() => {}} />
+        <Row icon="cloud-download" label={t('set.checkUpdate')} value={`v${APP_VERSION}`} onPress={() => requestUpdateCheck()} />
         <View style={{ padding: spacing.md }}>
           <Txt variant="tiny">{t('set.infoText')}</Txt>
         </View>

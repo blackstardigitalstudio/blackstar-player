@@ -88,8 +88,12 @@ export const useVpn = create<VpnState>((set, get) => ({
     try {
       await WireGuardVpn.initialize();
       await WireGuardVpn.connect(cfg.config);
+      // Trust the native tunnel state — never claim "connected" without it, or
+      // the VPN screen would advertise an IP mask that may not actually exist.
       await get().refreshStatus();
-      if (get().status !== 'ERROR') set({ status: 'CONNECTED' });
+      const st = get().status;
+      if (st === 'CONNECTING') set({ status: 'CONNECTED' }); // connect() resolved, handshake pending
+      else if (st === 'DISCONNECTED') set({ status: 'ERROR', error: 'Tunnel VPN non attivo.' });
       await get().fetchIp();
     } catch (e: any) {
       set({ status: 'ERROR', error: e?.message || 'Connessione VPN non riuscita.' });

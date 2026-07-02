@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { useT } from '@/i18n';
-import { colors, compact, font, radius, spacing } from '@/theme/tokens';
+import { colors, font, radius, spacing } from '@/theme/tokens';
 import { Txt } from './ui';
 
 const ITEMS = [
@@ -24,9 +24,9 @@ export function NavRail() {
   const t = useT();
 
   return (
-    <View style={[styles.rail, { width: compact ? 140 : 184 }]}>
+    <View style={styles.rail}>
       <View style={styles.brand}>
-        <Ionicons name="ellipse-outline" size={compact ? 22 : 26} color={colors.accent} />
+        <Ionicons name="ellipse-outline" size={26} color={colors.accent} />
       </View>
       <FocusScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 4, paddingBottom: spacing.lg }}>
         {ITEMS.map((it) => {
@@ -40,10 +40,10 @@ export function NavRail() {
             focusStyle={styles.itemFocus}
           >
             {(focused) => (
-              <View style={[styles.itemInner, compact && { paddingVertical: 10 }, active && styles.itemActive]}>
+              <View style={[styles.itemInner, active && styles.itemActive]}>
                 <Ionicons
                   name={it.icon as any}
-                  size={compact ? 20 : 24}
+                  size={24}
                   color={active || focused ? colors.accent : colors.textMuted}
                 />
                 <Txt

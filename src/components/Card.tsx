@@ -3,14 +3,13 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors, compact, font, gradients, radius } from '@/theme/tokens';
+import { colors, font, gradients, radius } from '@/theme/tokens';
 import type { MediaItem } from '@/lib/types';
 import { Txt } from './ui';
 
-// Square thumbnails: uniform, images shown with "contain" (never cropped/zoomed),
-// responsive size (smaller on phones). Same square for posters and channels.
-const SC = compact ? 0.82 : 1;
-export const POSTER_W = Math.round(168 * SC);
+// Square thumbnails: uniform, images shown with "contain" (never cropped/zoomed).
+// Same square for posters and channels. 10-foot sizing (box / Android TV).
+export const POSTER_W = 168;
 export const POSTER_H = POSTER_W;
 export const TILE_W = POSTER_W;
 export const TILE_H = POSTER_W;

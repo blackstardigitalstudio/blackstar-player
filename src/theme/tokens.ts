@@ -43,30 +43,9 @@ export const gradients = {
   fade: ['transparent', 'rgba(10,10,15,0.6)', '#0A0A0F'] as const,
 };
 
-import { Dimensions } from 'react-native';
-import * as Device from 'expo-device';
-import { readDeviceMode } from '@/lib/deviceMode';
-
-// Phones get a compact scale; TV / box / tablet keep the 10-foot sizing.
-// The user's explicit TV/Phone choice (if any) wins over auto-detection.
-function isCompactDevice(): boolean {
-  try {
-    const dt = Device.deviceType;
-    if (dt === Device.DeviceType.PHONE) return true;
-    if (dt === Device.DeviceType.TV || dt === Device.DeviceType.TABLET || dt === Device.DeviceType.DESKTOP) return false;
-  } catch {}
-  const { width, height } = Dimensions.get('window');
-  return Math.min(width, height) < 480 && Math.max(width, height) < 820;
-}
-function resolveCompact(): boolean {
-  const choice = readDeviceMode();
-  if (choice === 'phone') return true;
-  if (choice === 'tv') return false;
-  return isCompactDevice();
-}
-export const compact = resolveCompact();
-const S = compact ? 0.82 : 1;
-const r = (n: number) => Math.round(n * S);
+// Single 10-foot layout: this app targets Android boxes / Android TV only.
+// No phone/compact mode — one consistent sizing everywhere (fixed rule).
+const r = (n: number) => n;
 
 export const radius = {
   sm: 8,

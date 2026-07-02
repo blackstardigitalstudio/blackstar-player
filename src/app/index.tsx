@@ -9,7 +9,6 @@ export default function Index() {
   const hasSource = useStore((s) => s.sources.length > 0);
   const multiProfile = useStore((s) => s.profiles.length > 1);
   const profileChosen = useStore((s) => s.profileChosen);
-  const deviceModeChosen = useStore((s) => s.settings.deviceModeChosen);
 
   if (!hydrated) {
     return (
@@ -18,8 +17,6 @@ export default function Index() {
       </View>
     );
   }
-  // First launch: ask TV or Phone (gated on a persisted flag → never loops).
-  if (!deviceModeChosen) return <Redirect href={'/device-setup' as any} />;
   if (!hasSource) return <Redirect href="/onboarding" />;
   if (multiProfile && !profileChosen) return <Redirect href="/profiles" />;
   return <Redirect href="/(tabs)/home" />;

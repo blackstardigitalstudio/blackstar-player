@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { openBrowserAsync } from 'expo-web-browser';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
@@ -24,6 +24,8 @@ export default function Vpn() {
   const [name, setName] = useState('');
   const [conf, setConf] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const nameRef = useRef<TextInput>(null);
+  const confRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!vpn.hydrated) vpn.hydrate();
@@ -129,23 +131,33 @@ export default function Vpn() {
           {t('vpn.import')}
         </Txt>
         <View style={{ gap: spacing.sm }}>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder={t('vpn.nameOpt')}
-            placeholderTextColor={colors.textFaint}
-            style={styles.input}
-          />
-          <TextInput
-            value={conf}
-            onChangeText={setConf}
-            placeholder={t('vpn.paste')}
-            placeholderTextColor={colors.textFaint}
-            multiline
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={[styles.input, styles.textarea]}
-          />
+          <Focusable onSelect={() => nameRef.current?.focus()} onFocus={() => nameRef.current?.focus()} focusStyle={{}}>
+            {(ring) => (
+              <TextInput
+                ref={nameRef}
+                value={name}
+                onChangeText={setName}
+                placeholder={t('vpn.nameOpt')}
+                placeholderTextColor={colors.textFaint}
+                style={[styles.input, ring && { borderColor: colors.borderFocus }]}
+              />
+            )}
+          </Focusable>
+          <Focusable onSelect={() => confRef.current?.focus()} onFocus={() => confRef.current?.focus()} focusStyle={{}}>
+            {(ring) => (
+              <TextInput
+                ref={confRef}
+                value={conf}
+                onChangeText={setConf}
+                placeholder={t('vpn.paste')}
+                placeholderTextColor={colors.textFaint}
+                multiline
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.input, styles.textarea, ring && { borderColor: colors.borderFocus }]}
+              />
+            )}
+          </Focusable>
           {err ? (
             <Txt variant="small" color={colors.danger}>
               {err}

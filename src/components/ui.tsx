@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
-import { colors, compact, font, gradients, radius, spacing } from '@/theme/tokens';
+import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
 
 type TxtProps = {
   children: React.ReactNode;
@@ -110,7 +110,7 @@ export function PrimaryButton({
   return (
     <Focusable onSelect={onPress} autoFocus={autoFocus} style={{ borderRadius: radius.pill }}>
       {(focused) => {
-        const active = compact || focused;
+        const active = focused;
         return (
           <LinearGradient
             colors={active ? gradients.brand : (['#2A2A3A', '#20202E'] as const)}
