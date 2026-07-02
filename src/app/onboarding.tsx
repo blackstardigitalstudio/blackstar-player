@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore } from '@/store/useStore';
 import { parseM3U } from '@/lib/m3u';
 import { loadXtreamFailover } from '@/lib/xtream';
@@ -109,7 +110,7 @@ export default function Onboarding() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
+      <FocusScrollView contentContainerStyle={styles.wrap}>
         {editId ? (
           <View style={{ marginBottom: spacing.md }}>
             <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
@@ -186,7 +187,7 @@ export default function Onboarding() {
         <Txt variant="tiny" style={{ marginTop: spacing.lg, maxWidth: 520 }}>
           {t('ob.disclaimer')}
         </Txt>
-      </ScrollView>
+      </FocusScrollView>
     </Screen>
   );
 }

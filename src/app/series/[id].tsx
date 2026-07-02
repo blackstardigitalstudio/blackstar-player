@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Empty, GhostButton, Screen, Spinner, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore } from '@/store/useStore';
 import { m3uEpisodes } from '@/lib/m3u';
 import { loadSeriesInfo } from '@/lib/xtream';
@@ -73,7 +74,7 @@ export default function SeriesDetail() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+      <FocusScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
         <View style={{ marginBottom: spacing.md }}>
           <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
         </View>
@@ -162,7 +163,7 @@ export default function SeriesDetail() {
             </View>
           </>
         )}
-      </ScrollView>
+      </FocusScrollView>
     </Screen>
   );
 }

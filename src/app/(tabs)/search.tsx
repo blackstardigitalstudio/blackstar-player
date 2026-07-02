@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { Rail } from '@/components/Rail';
 import { Empty, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
@@ -77,7 +78,7 @@ export default function Search() {
       ) : !ready ? (
         <Empty icon="search-outline" title={t('search.min2')} hint={t('search.min2Hint')} />
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
+        <FocusScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
           {suggestions.length > 0 ? (
             <View style={styles.suggestRow}>
               {suggestions.map((s) => (
@@ -101,7 +102,7 @@ export default function Search() {
               <Rail title={t('search.related')} items={related} onSelect={go} variant="poster" />
             </>
           )}
-        </ScrollView>
+        </FocusScrollView>
       )}
     </View>
   );

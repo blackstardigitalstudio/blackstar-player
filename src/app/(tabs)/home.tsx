@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { ContinueRail } from '@/components/ContinueRail';
 import { Rail } from '@/components/Rail';
 import { Empty, GhostButton, Spinner, Txt } from '@/components/ui';
@@ -127,7 +128,7 @@ export default function Home() {
           hint={error ?? t('home.emptyHint')}
         />
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+        <FocusScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
           {/* Big category folders */}
           <View style={styles.folders}>
             {folders.map((fld) => (
@@ -148,7 +149,7 @@ export default function Home() {
             <Rail key={`cat-${r.cat}`} title={t('home.becauseLike', { cat: r.cat })} items={r.items} onSelect={go} variant="poster" />
           ))}
           <Rail title={t('home.recommended')} items={recommended} onSelect={go} variant="poster" />
-        </ScrollView>
+        </FocusScrollView>
       )}
 
       {typed ? (

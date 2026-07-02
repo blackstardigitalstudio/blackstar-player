@@ -2,9 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { openBrowserAsync } from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { useVpn } from '@/store/useVpn';
 import { parseWgConf } from '@/lib/wireguard';
 import { useT } from '@/i18n';
@@ -54,7 +55,7 @@ export default function Vpn() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
+      <FocusScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
           <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
           <Txt variant="h2">{t('vpn.title')}</Txt>
@@ -165,7 +166,7 @@ export default function Vpn() {
         <Txt variant="tiny" style={{ marginTop: spacing.sm }}>
           {t('vpn.freeNote')}
         </Txt>
-      </ScrollView>
+      </FocusScrollView>
     </Screen>
   );
 }

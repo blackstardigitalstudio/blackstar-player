@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { PinModal } from '@/components/PinModal';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { reloadAppAsync } from 'expo';
 import { useStore, type PlayerMode } from '@/store/useStore';
 import { openCastSettings } from '@/lib/cast';
@@ -118,7 +119,7 @@ export default function Settings() {
 
   return (
     <>
-    <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+    <FocusScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
       <Txt variant="h2" style={{ marginBottom: spacing.md }}>
         {t('set.title')}
       </Txt>
@@ -278,7 +279,7 @@ export default function Settings() {
           <Txt variant="tiny">{t('set.infoText')}</Txt>
         </View>
       </Section>
-    </ScrollView>
+    </FocusScrollView>
     <PinModal visible={pinMode !== null} title={pinTitle} onSubmit={handlePin} onClose={() => setPinMode(null)} />
     </>
   );
@@ -292,8 +293,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  row: { borderRadius: radius.md, marginHorizontal: 6, marginVertical: 2 },
-  rowFocus: { backgroundColor: colors.surfaceHi },
-  editBtn: { padding: 12, borderRadius: radius.md, marginRight: 6 },
+  row: { borderRadius: radius.md, marginHorizontal: 6, marginVertical: 2, borderWidth: 2, borderColor: 'transparent' },
+  rowFocus: { backgroundColor: colors.surfaceHi, borderColor: colors.borderFocus },
+  editBtn: { padding: 12, borderRadius: radius.md, marginRight: 6, borderWidth: 2, borderColor: 'transparent' },
   rowInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 14, paddingHorizontal: spacing.md },
 });

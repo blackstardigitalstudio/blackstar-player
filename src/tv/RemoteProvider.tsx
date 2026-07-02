@@ -21,15 +21,18 @@ interface Node {
   id: string;
   measure: () => Promise<Rect | null>;
   onSelect?: () => void;
-  onFocusChange?: (f: boolean) => void;
 }
 
+/** Notified with the authoritative focused id on every focus change. */
+type FocusListener = (focusedId: string | null) => void;
 type KeyHandler = (key: RemoteKey) => boolean | void;
 
 interface RemoteCtx {
   register: (n: Node) => void;
   unregister: (id: string) => void;
   requestFocus: (id: string) => void;
+  /** Subscribe to focus changes. Called immediately with the current focus. Returns an unsubscribe. */
+  subscribe: (fn: FocusListener) => () => void;
   pushHandler: (h: KeyHandler) => () => void;
   dispatch: (key: RemoteKey) => void;
   /** True when the last interaction was touch/pointer (hide the focus ring). */
@@ -70,6 +73,7 @@ function directionalCost(dir: RemoteKey, from: Rect, to: Rect): number {
 
 export function RemoteProvider({ children }: { children: React.ReactNode }) {
   const nodes = useRef(new Map<string, Node>());
+  const listeners = useRef(new Set<FocusListener>());
   const handlers = useRef<KeyHandler[]>([]);
   const focusedRef = useRef<string | null>(null);
   const pointerRef = useRef(false);
@@ -82,18 +86,28 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Focus is tracked via a ref + per-node callbacks (no context churn on moves).
+  // Single source of truth: the focused id lives in a ref. Every change is
+  // broadcast to ALL focusables with the authoritative id, so a stale/stuck
+  // ring is impossible (each computes focused = myId === focusedId). React
+  // bails out of unchanged setState, so only the two affected nodes re-render.
   const setFocus = useCallback((id: string | null) => {
-    const prev = focusedRef.current;
-    if (prev === id) return;
-    if (prev) nodes.current.get(prev)?.onFocusChange?.(false);
+    if (focusedRef.current === id) return;
     focusedRef.current = id;
-    if (id) nodes.current.get(id)?.onFocusChange?.(true);
+    listeners.current.forEach((l) => l(id));
+  }, []);
+
+  const subscribe = useCallback((fn: FocusListener) => {
+    listeners.current.add(fn);
+    fn(focusedRef.current);
+    return () => {
+      listeners.current.delete(fn);
+    };
   }, []);
 
   const register = useCallback(
     (n: Node) => {
       nodes.current.set(n.id, n);
+      // Auto-focus the first element that registers on an empty screen.
       if (!focusedRef.current) setFocus(n.id);
     },
     [setFocus],
@@ -102,14 +116,17 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   const unregister = useCallback(
     (id: string) => {
       nodes.current.delete(id);
-      if (focusedRef.current === id) focusedRef.current = null;
+      if (focusedRef.current === id) setFocus(null);
     },
-    [],
+    [setFocus],
   );
 
-  const requestFocus = useCallback((id: string) => {
-    if (nodes.current.has(id)) setFocus(id);
-  }, [setFocus]);
+  const requestFocus = useCallback(
+    (id: string) => {
+      if (nodes.current.has(id)) setFocus(id);
+    },
+    [setFocus],
+  );
 
   const move = useCallback(
     async (dir: RemoteKey) => {
@@ -190,8 +207,8 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   const value = useMemo<RemoteCtx>(
-    () => ({ register, unregister, requestFocus, pushHandler, dispatch, pointerMode, setPointerMode }),
-    [register, unregister, requestFocus, pushHandler, dispatch, pointerMode, setPointerMode],
+    () => ({ register, unregister, requestFocus, subscribe, pushHandler, dispatch, pointerMode, setPointerMode }),
+    [register, unregister, requestFocus, subscribe, pushHandler, dispatch, pointerMode, setPointerMode],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

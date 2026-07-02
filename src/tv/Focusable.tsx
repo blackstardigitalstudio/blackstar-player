@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, compact, focusRing, radius } from '@/theme/tokens';
+import { colors, focusRing, radius } from '@/theme/tokens';
 import { useRemote, type Rect } from './RemoteProvider';
+import { useFocusScroll } from './FocusScroll';
 
 let counter = 0;
 
@@ -32,7 +33,16 @@ export function Focusable({
   const idRef = useRef(focusKey || `f${++counter}`);
   const id = idRef.current;
   const [focused, setFocused] = useState(false);
-  const { register, unregister, requestFocus, pointerMode, setPointerMode } = useRemote();
+  const { register, unregister, requestFocus, setPointerMode, subscribe } = useRemote();
+  const scroll = useFocusScroll();
+
+  // Keep callbacks in refs so the register effect never re-runs on every render
+  // (inline onSelect/onFocus closures would otherwise churn register/unregister
+  // and could drop focus notifications → stuck rings).
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const onFocusRef = useRef(onFocus);
+  onFocusRef.current = onFocus;
 
   const measure = useCallback(
     () =>
@@ -47,31 +57,37 @@ export function Focusable({
     [],
   );
 
+  // Register once (stable deps). onSelect is read from the ref at call time.
   useEffect(() => {
     if (disabled) {
       unregister(id);
       return;
     }
-    register({
-      id,
-      measure,
-      onSelect,
-      onFocusChange: (f) => {
-        setFocused(f);
-        if (f) onFocus?.();
-      },
-    });
+    register({ id, measure, onSelect: () => onSelectRef.current?.() });
     return () => unregister(id);
-  }, [register, unregister, id, measure, onSelect, onFocus, disabled]);
+  }, [register, unregister, id, measure, disabled]);
+
+  // Authoritative focus subscription: recomputes focused = (focusedId === id)
+  // on EVERY focus change. Impossible to miss an update → no stuck rings.
+  useEffect(() => {
+    return subscribe((focusedId) => {
+      const f = focusedId === id;
+      setFocused(f);
+      if (f) {
+        onFocusRef.current?.();
+        // Keep the focused element on screen inside a FocusScrollView.
+        if (scroll) measure().then((r) => r && scroll.scrollToRect(r));
+      }
+    });
+  }, [subscribe, id, scroll, measure]);
 
   useEffect(() => {
     if (autoFocus && !disabled) requestFocus(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // TV: the focus ring is ALWAYS visible while focused (so you never lose your
-  // place with the remote). Phone: show it only when navigating by key, not touch.
-  const ring = compact ? focused && !pointerMode : focused;
+  // The focus ring is ALWAYS visible while focused so you never lose your place.
+  const ring = focused;
 
   return (
     <Pressable
@@ -82,6 +98,9 @@ export function Focusable({
         setPointerMode(true);
         requestFocus(id);
       }}
+      // Mouse / air-mouse: hovering focuses the element (ring follows the cursor).
+      onHoverIn={() => requestFocus(id)}
+      onPointerEnter={() => requestFocus(id)}
       style={({ pressed }) => [style, ring && (focusStyle ?? styles.focused), pressed && styles.pressed]}
     >
       {typeof children === 'function' ? (children as any)(ring, () => requestFocus(id)) : children}

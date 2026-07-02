@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors, compact, gradients, radius } from '@/theme/tokens';
+import { colors, compact, font, gradients, radius } from '@/theme/tokens';
 import type { MediaItem } from '@/lib/types';
 import { Txt } from './ui';
 
@@ -14,6 +14,13 @@ export const POSTER_W = Math.round(168 * SC);
 export const POSTER_H = POSTER_W;
 export const TILE_W = POSTER_W;
 export const TILE_H = POSTER_W;
+
+// FIXED card heights so grid rows are deterministic (exact scroll math, no drift).
+// Rule: explicit line height + fixed label box. Poster label = 2 lines, tile = 1.
+const LABEL_LINE = Math.round(font.small * 1.28);
+const LABEL_MT = 6;
+export const CARD_H_POSTER = POSTER_H + LABEL_MT + LABEL_LINE * 2;
+export const CARD_H_TILE = TILE_H + LABEL_MT + LABEL_LINE;
 
 function Fallback({ name, icon }: { name: string; icon?: any }) {
   return (
@@ -60,9 +67,11 @@ export function PosterCard({ item, focused }: { item: MediaItem; focused: boolea
           </Txt>
         </View>
       ) : null}
-      <Txt variant="small" numberOfLines={2} style={{ marginTop: 6, color: focused ? colors.text : colors.textMuted }}>
-        {item.name}
-      </Txt>
+      <View style={{ height: LABEL_LINE * 2, marginTop: LABEL_MT }}>
+        <Txt variant="small" numberOfLines={2} style={{ lineHeight: LABEL_LINE, color: focused ? colors.text : colors.textMuted }}>
+          {item.name}
+        </Txt>
+      </View>
     </View>
   );
 }
@@ -78,9 +87,11 @@ export function ChannelCard({ item, focused }: { item: MediaItem; focused: boole
           </Txt>
         </View>
       ) : null}
-      <Txt variant="small" numberOfLines={1} style={{ marginTop: 6, color: focused ? colors.text : colors.textMuted }}>
-        {item.name}
-      </Txt>
+      <View style={{ height: LABEL_LINE, marginTop: LABEL_MT }}>
+        <Txt variant="small" numberOfLines={1} style={{ lineHeight: LABEL_LINE, color: focused ? colors.text : colors.textMuted }}>
+          {item.name}
+        </Txt>
+      </View>
     </View>
   );
 }

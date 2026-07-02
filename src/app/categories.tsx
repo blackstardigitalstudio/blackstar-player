@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GhostButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore } from '@/store/useStore';
 import { useT } from '@/i18n';
 import type { CatOrder } from '@/lib/categories';
@@ -54,7 +55,7 @@ export default function Categories() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+      <FocusScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
           <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
           <Txt variant="h2">{t('cat.title')}</Txt>
@@ -97,7 +98,7 @@ export default function Categories() {
             </View>
           </>
         ) : null}
-      </ScrollView>
+      </FocusScrollView>
     </Screen>
   );
 }

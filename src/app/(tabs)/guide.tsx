@@ -173,8 +173,8 @@ export default function Guide() {
             showsVerticalScrollIndicator={false}
             getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
             initialNumToRender={10}
-            windowSize={9}
-            removeClippedSubviews
+            windowSize={11}
+            removeClippedSubviews={false}
             renderItem={({ item }) => (
               <View style={styles.chanRow}>
                 <ChannelCell channel={item} onPlay={() => play.open(item)} />
@@ -197,8 +197,8 @@ export default function Guide() {
               showsVerticalScrollIndicator={false}
               getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
               initialNumToRender={10}
-              windowSize={9}
-              removeClippedSubviews
+              windowSize={11}
+              removeClippedSubviews={false}
               renderItem={({ item }) => <ProgramRow channel={item} source={source} startSec={startSec} onPlay={() => play.open(item)} />}
             />
             {nowX >= 0 && nowX <= TIMELINE_W ? <View pointerEvents="none" style={[styles.nowLine, { left: nowX, height: listH, top: HEADER_H }]} /> : null}

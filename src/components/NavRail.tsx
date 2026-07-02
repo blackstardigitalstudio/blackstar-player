@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { FocusScrollView } from '@/tv/FocusScroll';
 import { useT } from '@/i18n';
 import { colors, compact, font, radius, spacing } from '@/theme/tokens';
 import { Txt } from './ui';
@@ -27,7 +28,7 @@ export function NavRail() {
       <View style={styles.brand}>
         <Ionicons name="ellipse-outline" size={compact ? 22 : 26} color={colors.accent} />
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 4, paddingBottom: spacing.lg }}>
+      <FocusScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 4, paddingBottom: spacing.lg }}>
         {ITEMS.map((it) => {
         const active = pathname.includes(it.key);
         return (
@@ -59,7 +60,7 @@ export function NavRail() {
           </Focusable>
         );
         })}
-      </ScrollView>
+      </FocusScrollView>
     </View>
   );
 }
