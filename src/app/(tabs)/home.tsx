@@ -23,10 +23,16 @@ function Folder({ label, icon, color, count, onPress }: { label: string; icon: a
       {(f) => (
         <LinearGradient colors={[color + '33', colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.folderInner, f && { borderColor: color }]}>
           <Ionicons name={icon} size={34} color={color} />
-          <Txt variant="h3" numberOfLines={1}>
+          <Txt variant="h3" numberOfLines={1} color={colors.text} style={{ fontWeight: '800' }}>
             {label}
           </Txt>
-          {count ? <Txt variant="tiny">{count}</Txt> : null}
+          {count ? (
+            <View style={styles.folderCount}>
+              <Txt variant="tiny" color={colors.textMuted}>
+                {count}
+              </Txt>
+            </View>
+          ) : null}
         </LinearGradient>
       )}
     </Focusable>
@@ -176,7 +182,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     justifyContent: 'center',
-    gap: 4,
+    gap: 6,
+  },
+  folderCount: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
   },
   zap: {
     position: 'absolute',

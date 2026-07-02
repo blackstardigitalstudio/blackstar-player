@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { BrandMark, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { writeDeviceMode, type DeviceMode } from '@/lib/deviceMode';
+import { useStore } from '@/store/useStore';
 import { useT } from '@/i18n';
 import { colors, radius, spacing } from '@/theme/tokens';
 
@@ -26,7 +27,8 @@ export default function DeviceSetup() {
   const t = useT();
 
   const pick = async (mode: DeviceMode) => {
-    writeDeviceMode(mode);
+    writeDeviceMode(mode); // for sizing (read synchronously at startup)
+    await useStore.getState().updateSettings({ deviceModeChosen: true }); // reliable gate
     // Reload so the new sizing/scale applies immediately.
     try {
       await reloadAppAsync();

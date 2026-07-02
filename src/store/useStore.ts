@@ -31,6 +31,7 @@ export interface Settings {
   pin: string;
   categoryOrder: 'default' | 'alpha' | 'mostWatched' | 'manual';
   categoryManual: string[];
+  deviceModeChosen: boolean;
 }
 
 function deviceLang(): Lang {
@@ -56,6 +57,7 @@ const DEFAULT_SETTINGS: Settings = {
   pin: '',
   categoryOrder: 'default',
   categoryManual: [],
+  deviceModeChosen: false,
 };
 
 export const PROFILE_COLORS = ['#A855F7', '#22D3EE', '#34D399', '#FBBF24', '#FB7185', '#60A5FA'];
