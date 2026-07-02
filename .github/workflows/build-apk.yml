@@ -44,11 +44,18 @@ jobs:
         run: npm ci
 
       # Android refuses to install an update APK whose versionCode is not higher
-      # than the installed one. Tie it to the (monotonic) build number so every
-      # published build supersedes the previous — the in-app updater then works.
+      # than the installed one. Tie it to the (monotonic) build number + a base
+      # offset (reset-proof headroom) so every published build supersedes the
+      # previous — the in-app updater then works.
       - name: Set Android versionCode
         run: |
-          node -e "const fs=require('fs');const p='./app.json';const j=require(p);j.expo.android.versionCode=${{ github.run_number }};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');console.log('versionCode =', j.expo.android.versionCode)"
+          node -e "const fs=require('fs');const p='./app.json';const j=require(p);j.expo.android.versionCode=100000+${{ github.run_number }};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');console.log('versionCode =', j.expo.android.versionCode)"
+
+      # Keep the JS-side APP_VERSION identical to app.json expo.version so the
+      # updater's compare can never drift. Dev bumps ONLY app.json expo.version.
+      - name: Sync APP_VERSION
+        run: |
+          node -e "const fs=require('fs');const v=require('./app.json').expo.version;const f='./src/lib/version.ts';let s=fs.readFileSync(f,'utf8');s=s.replace(/export const APP_VERSION = '[^']*';/, \"export const APP_VERSION = '\"+v+\"';\");fs.writeFileSync(f,s);console.log('APP_VERSION =', v)"
 
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --no-install
@@ -86,6 +93,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
+          make_latest: true
           name: Blackstar Player (latest build)
           files: |
             blackstar-player.apk

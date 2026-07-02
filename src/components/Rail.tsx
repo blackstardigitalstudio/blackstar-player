@@ -51,7 +51,9 @@ export function Rail({
         windowSize={11}
         removeClippedSubviews={false}
         getItemLayout={(_, index) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
-        onScrollToIndexFailed={() => {}}
+        onScrollToIndexFailed={(info) => {
+          ref.current?.scrollToOffset({ offset: spacing.lg + itemW * info.index, animated: false });
+        }}
         renderItem={({ item, index }) => (
           <Focusable onSelect={() => onSelect(item)} onFocus={() => scrollTo(index)} focusStyle={EMPTY}>
             {(f) => <CardFor item={item} focused={f} variant={variant} />}

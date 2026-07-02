@@ -74,7 +74,9 @@ export default function Vpn() {
               <Txt variant="h3" color={statusColor}>
                 {statusLabel}
               </Txt>
-              <Txt variant="tiny">{t('vpn.yourIp', { ip: vpn.ip || '—' })}</Txt>
+              <Txt variant="tiny">
+                {t('vpn.server', { host: connected ? (vpn.configs.find((c) => c.id === vpn.activeId)?.config.serverAddress || '—') : '—' })}
+              </Txt>
             </View>
             {connected ? (
               <PrimaryButton label={t('vpn.disconnect')} icon="power" onPress={() => vpn.disconnect()} />

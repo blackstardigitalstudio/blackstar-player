@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Directory, File, Paths } from 'expo-file-system';
+import * as FS from 'expo-file-system/legacy';
 import type { LoadedContent } from './types';
 
 export const KEYS = {
@@ -43,16 +43,16 @@ export async function remove(key: string): Promise<void> {
  * filesystem (no AsyncStorage size limit) for instant reopen without a reload.
  */
 const CONTENT_PREFIX = 'bs-content-';
-function contentFile(sourceId: string) {
-  return new File(Paths.document, `${CONTENT_PREFIX}${sourceId}.json`);
+const DOCS = FS.documentDirectory || '';
+function contentUri(sourceId: string) {
+  return `${DOCS}${CONTENT_PREFIX}${sourceId}.json`;
 }
 
 export async function cacheContent(sourceId: string, content: LoadedContent) {
   try {
-    const f = contentFile(sourceId);
-    if (f.exists) f.delete();
-    f.create();
-    f.write(JSON.stringify(content));
+    // Async write → the multi-MB disk I/O runs off the JS thread (no ANR on
+    // low-end boxes writing a huge catalog).
+    await FS.writeAsStringAsync(contentUri(sourceId), JSON.stringify(content));
   } catch {
     // best-effort cache
   }
@@ -60,9 +60,10 @@ export async function cacheContent(sourceId: string, content: LoadedContent) {
 
 export async function loadCachedContent(sourceId: string): Promise<LoadedContent | null> {
   try {
-    const f = contentFile(sourceId);
-    if (!f.exists) return null;
-    const txt = await f.text();
+    const uri = contentUri(sourceId);
+    const info = await FS.getInfoAsync(uri);
+    if (!info.exists) return null;
+    const txt = await FS.readAsStringAsync(uri);
     return txt ? (JSON.parse(txt) as LoadedContent) : null;
   } catch {
     return null;
@@ -71,20 +72,18 @@ export async function loadCachedContent(sourceId: string): Promise<LoadedContent
 
 export async function removeContentCache(sourceId: string) {
   try {
-    const f = contentFile(sourceId);
-    if (f.exists) f.delete();
+    await FS.deleteAsync(contentUri(sourceId), { idempotent: true });
   } catch {}
 }
 
 export async function clearAllContentCache() {
   try {
-    const dir = new Directory(Paths.document);
-    for (const item of dir.list()) {
-      if (item.name.startsWith(CONTENT_PREFIX)) {
-        try {
-          item.delete();
-        } catch {}
-      }
-    }
+    if (!DOCS) return;
+    const names = await FS.readDirectoryAsync(DOCS);
+    await Promise.all(
+      names
+        .filter((n) => n.startsWith(CONTENT_PREFIX))
+        .map((n) => FS.deleteAsync(`${DOCS}${n}`, { idempotent: true }).catch(() => {})),
+    );
   } catch {}
 }

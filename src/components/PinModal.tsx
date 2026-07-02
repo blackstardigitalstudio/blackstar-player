@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal, StyleSheet, TextInput, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { FocusLayer } from '@/tv/RemoteProvider';
 import { useT } from '@/i18n';
 import { colors, font, radius, spacing } from '@/theme/tokens';
 import { PrimaryButton, Txt } from './ui';
@@ -37,6 +38,8 @@ export function PinModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      {visible ? (
+      <FocusLayer>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Txt variant="h3" style={{ marginBottom: spacing.md }}>
@@ -74,6 +77,8 @@ export function PinModal({
           </View>
         </View>
       </View>
+      </FocusLayer>
+      ) : null}
     </Modal>
   );
 }

@@ -222,16 +222,42 @@ function atobPoly(input: string): string {
   }
   return out;
 }
+// Decode a binary (latin1) string as UTF-8 — replaces the deprecated escape()
+// trick so accented IT/ES program titles render correctly instead of mojibake.
+function utf8Decode(bin: string): string {
+  let out = '';
+  let i = 0;
+  const n = bin.length;
+  while (i < n) {
+    const c = bin.charCodeAt(i++) & 0xff;
+    if (c < 0x80) {
+      out += String.fromCharCode(c);
+    } else if (c >= 0xc0 && c < 0xe0) {
+      const c2 = bin.charCodeAt(i++) & 0x3f;
+      out += String.fromCharCode(((c & 0x1f) << 6) | c2);
+    } else if (c >= 0xe0 && c < 0xf0) {
+      const c2 = bin.charCodeAt(i++) & 0x3f;
+      const c3 = bin.charCodeAt(i++) & 0x3f;
+      out += String.fromCharCode(((c & 0x0f) << 12) | (c2 << 6) | c3);
+    } else if (c >= 0xf0) {
+      const c2 = bin.charCodeAt(i++) & 0x3f;
+      const c3 = bin.charCodeAt(i++) & 0x3f;
+      const c4 = bin.charCodeAt(i++) & 0x3f;
+      let cp = ((c & 0x07) << 18) | (c2 << 12) | (c3 << 6) | c4;
+      cp -= 0x10000;
+      out += String.fromCharCode(0xd800 + (cp >> 10), 0xdc00 + (cp & 0x3ff));
+    } else {
+      out += String.fromCharCode(c);
+    }
+  }
+  return out;
+}
 function decodeEpg(s: string): string {
   if (!s) return '';
   try {
-    return decodeURIComponent(escape(atobPoly(s)));
+    return utf8Decode(atobPoly(s));
   } catch {
-    try {
-      return atobPoly(s);
-    } catch {
-      return s;
-    }
+    return s;
   }
 }
 

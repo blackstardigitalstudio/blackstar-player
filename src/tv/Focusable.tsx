@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, focusRing, radius } from '@/theme/tokens';
-import { useRemote, type Rect } from './RemoteProvider';
+import { useRemote, useFocusLayer, type Rect } from './RemoteProvider';
 import { useFocusScroll } from './FocusScroll';
 
 let counter = 0;
@@ -34,6 +34,7 @@ export function Focusable({
   const id = idRef.current;
   const [focused, setFocused] = useState(false);
   const { register, unregister, requestFocus, setPointerMode, subscribe } = useRemote();
+  const layer = useFocusLayer();
   const scroll = useFocusScroll();
 
   // Keep callbacks in refs so the register effect never re-runs on every render
@@ -63,9 +64,9 @@ export function Focusable({
       unregister(id);
       return;
     }
-    register({ id, measure, onSelect: () => onSelectRef.current?.() });
+    register({ id, measure, layer, onSelect: () => onSelectRef.current?.() });
     return () => unregister(id);
-  }, [register, unregister, id, measure, disabled]);
+  }, [register, unregister, id, measure, disabled, layer]);
 
   // Authoritative focus subscription: recomputes focused = (focusedId === id)
   // on EVERY focus change. Impossible to miss an update → no stuck rings.

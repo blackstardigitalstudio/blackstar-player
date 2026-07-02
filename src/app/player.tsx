@@ -141,6 +141,8 @@ export default function Player() {
         const next = attempt.current + 1;
         if (settings.survivalMode && next < cur.candidates.length) {
           attempt.current = next;
+          // Same item, new source → let the resume seek re-apply on the fallback.
+          didSeek.current = false;
           player.replace(buildSource(cur.candidates[next]));
         } else {
           setBuffering(false);

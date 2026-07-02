@@ -20,7 +20,6 @@ interface VpnState {
   activeId: string | null;
   status: VpnStatus;
   error: string | null;
-  ip: string | null;
 
   hydrate: () => Promise<void>;
   addConfig: (name: string, parsed: WireGuardConfig) => Promise<SavedVpnConfig>;
@@ -28,17 +27,6 @@ interface VpnState {
   connect: (id: string) => Promise<void>;
   disconnect: () => Promise<void>;
   refreshStatus: () => Promise<void>;
-  fetchIp: () => Promise<void>;
-}
-
-async function publicIp(): Promise<string | null> {
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    return data?.ip ?? null;
-  } catch {
-    return null;
-  }
 }
 
 export const useVpn = create<VpnState>((set, get) => ({
@@ -48,7 +36,6 @@ export const useVpn = create<VpnState>((set, get) => ({
   activeId: null,
   status: 'DISCONNECTED',
   error: null,
-  ip: null,
 
   hydrate: async () => {
     const [configs, activeId] = await Promise.all([
@@ -63,7 +50,6 @@ export const useVpn = create<VpnState>((set, get) => ({
     }
     set({ configs, activeId, supported, hydrated: true });
     get().refreshStatus();
-    get().fetchIp();
   },
 
   addConfig: async (name, parsed) => {
@@ -94,7 +80,6 @@ export const useVpn = create<VpnState>((set, get) => ({
       const st = get().status;
       if (st === 'CONNECTING') set({ status: 'CONNECTED' }); // connect() resolved, handshake pending
       else if (st === 'DISCONNECTED') set({ status: 'ERROR', error: 'Tunnel VPN non attivo.' });
-      await get().fetchIp();
     } catch (e: any) {
       set({ status: 'ERROR', error: e?.message || 'Connessione VPN non riuscita.' });
     }
@@ -106,7 +91,6 @@ export const useVpn = create<VpnState>((set, get) => ({
       await WireGuardVpn.disconnect();
     } catch {}
     set({ status: 'DISCONNECTED' });
-    await get().fetchIp();
   },
 
   refreshStatus: async () => {
@@ -116,10 +100,5 @@ export const useVpn = create<VpnState>((set, get) => ({
     } catch {
       // leave current status
     }
-  },
-
-  fetchIp: async () => {
-    const ip = await publicIp();
-    set({ ip });
   },
 }));

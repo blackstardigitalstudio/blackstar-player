@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { FocusLayer } from '@/tv/RemoteProvider';
 import { useT } from '@/i18n';
 import { checkForUpdate, downloadAndInstall, setUpdateTrigger, type UpdateInfo } from '@/lib/updater';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -32,6 +33,9 @@ export function UpdateGate() {
       } else if (manual) {
         Alert.alert('Blackstar Player', t('upd.upToDate'));
       }
+    } catch {
+      // Only surface a failure on a manual check; the silent startup check stays quiet.
+      if (manual) Alert.alert('Blackstar Player', t('upd.checkFailed'));
     } finally {
       checking.current = false;
     }
@@ -54,9 +58,11 @@ export function UpdateGate() {
     setProgress(0);
     try {
       await downloadAndInstall(info, setProgress);
-      // The installer takes over here; keep the modal until the user returns.
     } catch {
       setError(t('upd.error'));
+    } finally {
+      // Re-enable the buttons whether the OS installer installed, was cancelled,
+      // or the download failed — never leave the modal frozen with no way out.
       setBusy(false);
     }
   };
@@ -66,6 +72,7 @@ export function UpdateGate() {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => !busy && setInfo(null)}>
+      <FocusLayer>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Txt variant="h3">{t('upd.title')}</Txt>
@@ -75,6 +82,11 @@ export function UpdateGate() {
           {info.notes ? (
             <Txt variant="small" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
               {info.notes}
+            </Txt>
+          ) : null}
+          {!busy ? (
+            <Txt variant="tiny" color={colors.textFaint} style={{ marginTop: spacing.sm }}>
+              {t('upd.installHint')}
             </Txt>
           ) : null}
 
@@ -109,6 +121,7 @@ export function UpdateGate() {
           ) : null}
         </View>
       </View>
+      </FocusLayer>
     </Modal>
   );
 }
