@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
-import { FocusList } from '@/tv/FocusList';
+import { FocusList, useListScroll } from '@/tv/FocusList';
 import { useT } from '@/i18n';
 import { useStore } from '@/store/useStore';
 import { sortCategories } from '@/lib/categories';
@@ -48,7 +48,7 @@ export function Browser({
     [categories, kind, order, taste, manual],
   );
   const [sel, setSel] = useState<string>('all');
-  const catRef = useRef<FlatList>(null);
+  const catScroll = useListScroll();
 
   const filtered = useMemo(
     () => (sel === 'all' ? items : items.filter((i) => i.categoryId === sel)),
@@ -62,11 +62,6 @@ export function Browser({
   const data = [{ id: 'all', name: t('common.all') }, ...cats.map((c) => ({ id: c.id, name: c.name }))];
 
   // Subcategories in a fixed LEFT column + content grid on the right (10-foot).
-  const scrollCat = (index: number) => {
-    try {
-      catRef.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
-    } catch {}
-  };
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
       <View style={styles.catCol}>
@@ -74,14 +69,16 @@ export function Browser({
           {title}
         </Txt>
         <FocusList
-          ref={catRef}
+          ref={catScroll.ref}
           data={data}
           keyExtractor={(c: any) => c.id}
           showsVerticalScrollIndicator={false}
+          onScroll={catScroll.onScroll}
+          onLayout={catScroll.onLayout}
           getItemLayout={(_: any, index: number) => ({ length: CAT_ROW, offset: CAT_ROW * index, index })}
           onScrollToIndexFailed={() => {}}
           renderItem={({ item, index }: any) => (
-            <Chip label={item.name} active={sel === item.id} onPress={() => setSel(item.id)} onFocus={() => scrollCat(index)} />
+            <Chip label={item.name} active={sel === item.id} onPress={() => setSel(item.id)} onFocus={() => catScroll.reveal(CAT_ROW * index, CAT_ROW)} />
           )}
         />
       </View>
