@@ -50,9 +50,22 @@ export function Focusable({
       new Promise<Rect | null>((resolve) => {
         const node = ref.current as any;
         if (!node || !node.measureInWindow) return resolve(null);
+        // CRITICAL: measureInWindow's callback may NEVER fire if the native view
+        // gets detached (virtualization/unmount mid-scroll). Without a timeout the
+        // promise hangs forever, the engine's "moving" lock never releases, and the
+        // remote stops responding ("after a while the cursor freezes"). Always
+        // resolve within a deadline — the caller falls back to the cached rect.
+        let done = false;
+        const finish = (r: Rect | null) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(r);
+        };
+        const timer = setTimeout(() => finish(null), 120);
         node.measureInWindow((x: number, y: number, w: number, h: number) => {
-          if (!w && !h) resolve(null);
-          else resolve({ x, y, w, h });
+          if (!w && !h) finish(null);
+          else finish({ x, y, w, h });
         });
       }),
     [],

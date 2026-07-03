@@ -232,7 +232,10 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       }
       movingRef.current = true;
       try {
-        await moveOnce(dir);
+        // Hard cap: even if moveOnce somehow stalls, the lock releases within
+        // 300ms so the remote can NEVER get permanently stuck ("cursor freezes
+        // after a while"). Per-measure timeouts already bound the normal path.
+        await Promise.race([moveOnce(dir), new Promise((r) => setTimeout(r, 300))]);
       } finally {
         movingRef.current = false;
         const next = pendingDirRef.current;
