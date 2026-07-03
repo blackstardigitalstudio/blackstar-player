@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
+import { useRemote } from '@/tv/RemoteProvider';
 import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
 
 type TxtProps = {
@@ -161,6 +162,7 @@ export function Field({
 }) {
   const [focused, setFocused] = React.useState(false);
   const inputRef = React.useRef<TextInput>(null);
+  const { dispatch } = useRemote();
   return (
     <Focusable
       onSelect={() => inputRef.current?.focus()}
@@ -181,6 +183,11 @@ export function Field({
             keyboardType={keyboardType}
             autoCapitalize={autoCapitalize}
             autoCorrect={false}
+            // Enter on the on-screen keyboard advances to the next field (or the
+            // submit button) — keep the keyboard up so it just hops down.
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => dispatch('down')}
             onFocus={() => {
               setFocused(true);
               focusSelf();

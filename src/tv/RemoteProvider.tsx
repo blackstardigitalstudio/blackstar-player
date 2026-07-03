@@ -23,6 +23,9 @@ interface Node {
   onSelect?: () => void;
   /** Focus layer this node lives in. Only nodes in the active (top) layer are reachable. */
   layer: number;
+  /** Last known window rect — used when a fresh measure returns null (mid-layout),
+   *  so a transient bad measure never makes navigation jump or lose the cursor. */
+  rect?: Rect | null;
 }
 
 /** Notified with the authoritative focused id on every focus change. */
@@ -135,7 +138,13 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       setFocus(candidates[0].id);
       return;
     }
-    const measured = await Promise.all(candidates.map(async (n) => ({ n, r: await n.measure() })));
+    const measured = await Promise.all(
+      candidates.map(async (n) => {
+        const fresh = await n.measure();
+        if (fresh) n.rect = fresh;
+        return { n, r: fresh ?? n.rect ?? null };
+      }),
+    );
     if (focusedRef.current) return;
     let best: Node | null = null;
     let bestD = Infinity;
@@ -242,13 +251,21 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       const list = Array.from(nodes.current.values()).filter((n) => n.layer === layer);
       if (!list.length) return;
       const current = focusedRef.current ? nodes.current.get(focusedRef.current) : null;
+      // Measure fresh, but fall back to each node's last known rect when a measure
+      // returns null (view mid-layout / mid-scroll). A transient bad measure must
+      // never make navigation jump or lose the cursor — this kills the "sometimes
+      // it works, sometimes not" flicker.
       const rects = await Promise.all(
-        list.map(async (n) => ({ n, r: await n.measure() })),
+        list.map(async (n) => {
+          const fresh = await n.measure();
+          if (fresh) n.rect = fresh;
+          return { n, r: fresh ?? n.rect ?? null };
+        }),
       );
       const valid = rects.filter((x) => x.r) as { n: Node; r: Rect }[];
 
-      // Pick the node nearest to where focus last was (spatial re-home), used when
-      // there is no current focus or the current node has gone (unmounted).
+      // Pick the node nearest to where focus last was (spatial re-home), used only
+      // when there is genuinely no current focus (it was null).
       const nearestToAnchor = () => {
         const a = focusedCenterRef.current;
         if (!a) return valid[0];
@@ -278,11 +295,8 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       }
       const fromRect = valid.find((x) => x.n.id === current.id)?.r;
       if (!fromRect) {
-        const p = nearestToAnchor();
-        if (p) {
-          remember(p.r);
-          setFocus(p.n.id);
-        }
+        // Current node is still focused but couldn't be located this frame — KEEP
+        // focus where it is instead of jumping. The next keypress will retry.
         return;
       }
       let best: { id: string; cost: number; r: Rect } | null = null;
