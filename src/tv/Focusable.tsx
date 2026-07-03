@@ -77,9 +77,9 @@ export function Focusable({
       unregister(id);
       return;
     }
-    register({ id, measure, layer, onSelect: () => onSelectRef.current?.() });
+    register({ id, measure, layer, autoFocus, onSelect: () => onSelectRef.current?.() });
     return () => unregister(id);
-  }, [register, unregister, id, measure, disabled, layer]);
+  }, [register, unregister, id, measure, disabled, layer, autoFocus]);
 
   // Authoritative focus subscription: recomputes focused = (focusedId === id)
   // on EVERY focus change. Impossible to miss an update → no stuck rings.

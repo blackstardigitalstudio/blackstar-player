@@ -23,6 +23,8 @@ interface Node {
   onSelect?: () => void;
   /** Focus layer this node lives in. Only nodes in the active (top) layer are reachable. */
   layer: number;
+  /** Prefer this node when its layer activates (e.g. a modal's primary button). */
+  autoFocus?: boolean;
   /** Last known window rect — used when a fresh measure returns null (mid-layout),
    *  so a transient bad measure never makes navigation jump or lose the cursor. */
   rect?: Rect | null;
@@ -201,8 +203,10 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     (layer: number) => {
       savedFocusRef.current[layer] = focusedRef.current;
       layerStackRef.current.push(layer);
-      const first = Array.from(nodes.current.values()).find((n) => n.layer === layer);
-      setFocus(first ? first.id : null);
+      // Focus the layer's primary (autoFocus) node if it has one, else the first.
+      const inLayer = Array.from(nodes.current.values()).filter((n) => n.layer === layer);
+      const target = inLayer.find((n) => n.autoFocus) ?? inLayer[0];
+      setFocus(target ? target.id : null);
     },
     [setFocus],
   );

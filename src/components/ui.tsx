@@ -161,6 +161,7 @@ export function Field({
   autoCapitalize?: 'none' | 'sentences';
 }) {
   const [focused, setFocused] = React.useState(false);
+  const [show, setShow] = React.useState(false);
   const inputRef = React.useRef<TextInput>(null);
   const { dispatch } = useRemote();
   return (
@@ -173,28 +174,36 @@ export function Field({
       {(ring, focusSelf) => (
         <View style={{ gap: 6 }}>
           <Txt variant="small">{label}</Txt>
-          <TextInput
-            ref={inputRef}
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={placeholder}
-            placeholderTextColor={colors.textFaint}
-            secureTextEntry={secureTextEntry}
-            keyboardType={keyboardType}
-            autoCapitalize={autoCapitalize}
-            autoCorrect={false}
-            // Enter on the on-screen keyboard advances to the next field (or the
-            // submit button) — keep the keyboard up so it just hops down.
-            returnKeyType="next"
-            blurOnSubmit={false}
-            onSubmitEditing={() => dispatch('down')}
-            onFocus={() => {
-              setFocused(true);
-              focusSelf();
-            }}
-            onBlur={() => setFocused(false)}
-            style={[styles.input, (focused || ring) && { borderColor: colors.borderFocus }]}
-          />
+          <View style={{ justifyContent: 'center' }}>
+            <TextInput
+              ref={inputRef}
+              value={value}
+              onChangeText={onChangeText}
+              placeholder={placeholder}
+              placeholderTextColor={colors.textFaint}
+              // Show the password in clear text when the eye toggle is on.
+              secureTextEntry={secureTextEntry && !show}
+              keyboardType={keyboardType}
+              autoCapitalize={autoCapitalize}
+              autoCorrect={false}
+              // Enter on the on-screen keyboard advances to the next field (or the
+              // submit button) — keep the keyboard up so it just hops down.
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => dispatch('down')}
+              onFocus={() => {
+                setFocused(true);
+                focusSelf();
+              }}
+              onBlur={() => setFocused(false)}
+              style={[styles.input, secureTextEntry && { paddingRight: 52 }, (focused || ring) && { borderColor: colors.borderFocus }]}
+            />
+            {secureTextEntry ? (
+              <Focusable onSelect={() => setShow((v) => !v)} style={styles.eye} focusStyle={{ borderColor: colors.borderFocus, borderWidth: 1 }}>
+                {(f) => <Ionicons name={show ? 'eye-off' : 'eye'} size={22} color={f ? colors.accent : colors.textMuted} />}
+              </Focusable>
+            ) : null}
+          </View>
         </View>
       )}
     </Focusable>
@@ -230,5 +239,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: colors.text,
     fontSize: font.body,
+  },
+  eye: {
+    position: 'absolute',
+    right: 6,
+    padding: 8,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
 });
