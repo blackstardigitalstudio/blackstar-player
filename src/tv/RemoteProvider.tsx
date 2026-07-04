@@ -300,10 +300,25 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
+      // Inside a modal (raised layer), navigate by registration order so a couple
+      // of buttons in a row are ALWAYS reachable — native Modals live in a separate
+      // window where measureInWindow is unreliable, so geometry alone can leave you
+      // stuck on one button ("couldn't move between Aggiorna and Più tardi").
+      const cycleInLayer = () => {
+        const ids = list.map((n) => n.id);
+        const idx = ids.indexOf(current.id);
+        if (idx < 0 || ids.length < 2) return;
+        const fwd = dir === 'right' || dir === 'down';
+        const nextIdx = (idx + (fwd ? 1 : -1) + ids.length) % ids.length;
+        setFocus(ids[nextIdx]);
+      };
+      const inModal = layer !== 0;
+
       const fromRect = valid.find((x) => x.n.id === current.id)?.r;
       if (!fromRect) {
-        // Current node is still focused but couldn't be located this frame — KEEP
-        // focus where it is instead of jumping. The next keypress will retry.
+        // Current node couldn't be located this frame. In a modal, fall back to
+        // order cycling; on a normal screen keep focus put and retry next press.
+        if (inModal) cycleInLayer();
         return;
       }
       let best: { id: string; cost: number; r: Rect } | null = null;
@@ -316,6 +331,9 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       if (best) {
         remember(best.r);
         setFocus(best.id);
+      } else if (inModal) {
+        // No directional neighbour found via geometry — cycle the modal's buttons.
+        cycleInLayer();
       }
     },
     [setFocus],
