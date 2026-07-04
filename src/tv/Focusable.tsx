@@ -33,7 +33,7 @@ export function Focusable({
   const idRef = useRef(focusKey || `f${++counter}`);
   const id = idRef.current;
   const [focused, setFocused] = useState(false);
-  const { register, unregister, requestFocus, setPointerMode, subscribe } = useRemote();
+  const { register, unregister, requestFocus, setPointerMode, subscribe, reportRect } = useRemote();
   const layer = useFocusLayer();
   const scroll = useFocusScroll();
 
@@ -71,6 +71,13 @@ export function Focusable({
     [],
   );
 
+  // Measure and push the rect into the engine's cache. The cache is what D-pad
+  // navigation reads (synchronously), so keeping it fresh here is what makes the
+  // arrows both instant and reliable.
+  const measureAndReport = useCallback(() => {
+    measure().then((r) => reportRect(id, r));
+  }, [measure, reportRect, id]);
+
   // Register once (stable deps). onSelect is read from the ref at call time.
   useEffect(() => {
     if (disabled) {
@@ -89,11 +96,15 @@ export function Focusable({
       setFocused(f);
       if (f) {
         onFocusRef.current?.();
-        // Keep the focused element on screen inside a FocusScrollView.
-        if (scroll) measure().then((r) => r && scroll.scrollToRect(r));
+        // Refresh this node's cached rect (it's the anchor for the next move) and
+        // keep it on screen inside a FocusScrollView.
+        measure().then((r) => {
+          if (r) reportRect(id, r);
+          if (r && scroll) scroll.scrollToRect(r);
+        });
       }
     });
-  }, [subscribe, id, scroll, measure]);
+  }, [subscribe, id, scroll, measure, reportRect]);
 
   useEffect(() => {
     if (autoFocus && !disabled) requestFocus(id);
@@ -107,6 +118,9 @@ export function Focusable({
     <Pressable
       ref={ref as any}
       disabled={disabled}
+      // Populate the position cache whenever this node is laid out (mount, and
+      // when it scrolls into view a list re-lays it out) so navigation is instant.
+      onLayout={measureAndReport}
       onPress={onSelect}
       onPressIn={() => {
         setPointerMode(true);

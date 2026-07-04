@@ -5,7 +5,6 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from 'react';
 import { DeviceEventEmitter, Platform } from 'react-native';
 import { androidKeyToRemote, webKeyToRemote, type RemoteKey } from './keys';
@@ -25,8 +24,9 @@ interface Node {
   layer: number;
   /** Prefer this node when its layer activates (e.g. a modal's primary button). */
   autoFocus?: boolean;
-  /** Last known window rect — used when a fresh measure returns null (mid-layout),
-   *  so a transient bad measure never makes navigation jump or lose the cursor. */
+  /** Cached window rect. D-pad navigation reads THIS synchronously (never measures
+   *  on the keypress) so arrows are instant and can never hang. Kept fresh by the
+   *  Focusable (on layout + on focus) and a background refresh after each move. */
   rect?: Rect | null;
 }
 
@@ -38,6 +38,8 @@ interface RemoteCtx {
   register: (n: Node) => void;
   unregister: (id: string) => void;
   requestFocus: (id: string) => void;
+  /** Focusable reports its measured window rect into the cache. */
+  reportRect: (id: string, rect: Rect | null) => void;
   /** Subscribe to focus changes. Called immediately with the current focus. Returns an unsubscribe. */
   subscribe: (fn: FocusListener) => () => void;
   pushHandler: (h: KeyHandler) => () => void;
@@ -84,27 +86,26 @@ function directionalCost(dir: RemoteKey, from: Rect, to: Rect): number {
   }
 }
 
+const raf = (fn: () => void) =>
+  typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(fn) : (setTimeout(fn, 0) as unknown as number);
+
 export function RemoteProvider({ children }: { children: React.ReactNode }) {
   const nodes = useRef(new Map<string, Node>());
   const listeners = useRef(new Set<FocusListener>());
   const handlers = useRef<KeyHandler[]>([]);
   const focusedRef = useRef<string | null>(null);
-  // Last known center of the focused node — anchor for re-homing after an unmount
-  // so focus lands on a spatial neighbour instead of teleporting to node #0.
-  const focusedCenterRef = useRef<{ x: number; y: number } | null>(null);
-  // Layer stack (base 0). Only nodes in the top layer are reachable → modal trap.
+  // Last known center of the focused node — anchor for re-homing after an unmount.
+  const savedCenterRef = useRef<{ x: number; y: number } | null>(null);
   const layerStackRef = useRef<number[]>([0]);
   const savedFocusRef = useRef<Record<number, string | null>>({});
   const activeLayer = () => layerStackRef.current[layerStackRef.current.length - 1];
 
-  // pointerMode is intentionally NOT part of the context value (the ring is always
-  // shown when focused), so pointer/key transitions don't re-render the tree.
+  // pointerMode is a no-op now (ring is always shown when focused).
   const setPointerMode = useCallback((_v: boolean) => {}, []);
 
-  // Single source of truth: the focused id lives in a ref. Every change is
-  // broadcast to ALL focusables with the authoritative id, so a stale/stuck
-  // ring is impossible (each computes focused = myId === focusedId). React
-  // bails out of unchanged setState, so only the two affected nodes re-render.
+  // Single source of truth: the focused id lives in a ref and every change is
+  // broadcast to all focusables with the authoritative id, so a stale/stuck ring
+  // is impossible. React bails on unchanged setState → only 2 nodes re-render.
   const setFocus = useCallback((id: string | null) => {
     if (focusedRef.current === id) return;
     focusedRef.current = id;
@@ -119,6 +120,11 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const reportRect = useCallback((id: string, rect: Rect | null) => {
+    const n = nodes.current.get(id);
+    if (n && rect) n.rect = rect;
+  }, []);
+
   const register = useCallback(
     (n: Node) => {
       nodes.current.set(n.id, n);
@@ -128,53 +134,46 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     [setFocus],
   );
 
+  const activeNodes = () => Array.from(nodes.current.values()).filter((n) => n.layer === activeLayer());
+
   // Re-home focus onto the spatially nearest surviving node in the active layer
-  // (anchored to where focus just was), instead of dropping to null / node #0.
-  const rehome = useCallback(async () => {
-    if (focusedRef.current) return; // already refocused meanwhile
-    const layer = activeLayer();
-    const candidates = Array.from(nodes.current.values()).filter((n) => n.layer === layer);
-    if (!candidates.length) return; // nothing to focus yet — watchdog will retry on next register
-    const anchor = focusedCenterRef.current;
-    if (!anchor) {
-      setFocus(candidates[0].id);
+  // (using cached rects — synchronous), instead of dropping to null / node #0.
+  const rehome = useCallback(() => {
+    if (focusedRef.current) return;
+    const list = activeNodes();
+    if (!list.length) return;
+    const withRect = list.filter((n) => n.rect) as (Node & { rect: Rect })[];
+    if (!withRect.length) {
+      setFocus(list[0].id);
       return;
     }
-    const measured = await Promise.all(
-      candidates.map(async (n) => {
-        const fresh = await n.measure();
-        if (fresh) n.rect = fresh;
-        return { n, r: fresh ?? n.rect ?? null };
-      }),
-    );
-    if (focusedRef.current) return;
-    let best: Node | null = null;
+    // Anchor on the last focused center if we have one.
+    const anchor = savedCenterRef.current;
+    if (!anchor) {
+      setFocus(withRect[0].id);
+      return;
+    }
+    let best = withRect[0];
     let bestD = Infinity;
-    for (const { n, r } of measured) {
-      if (!r) continue;
-      const c = center(r);
+    for (const n of withRect) {
+      const c = center(n.rect);
       const d = (c.x - anchor.x) ** 2 + (c.y - anchor.y) ** 2;
       if (d < bestD) {
         bestD = d;
         best = n;
       }
     }
-    setFocus(best ? best.id : candidates[0].id);
+    setFocus(best.id);
   }, [setFocus]);
 
-  // Watchdog: schedule a re-home AFTER the current commit settles, so it sees the
-  // final mounted set (post-virtualization / post-category-switch). Guarantees
-  // focus is never left null while focusable nodes exist → the cursor is never lost.
   const rehomeScheduled = useRef(false);
   const scheduleRehome = useCallback(() => {
     if (rehomeScheduled.current) return;
     rehomeScheduled.current = true;
-    const run = () => {
+    raf(() => {
       rehomeScheduled.current = false;
       rehome();
-    };
-    if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(run);
-    else setTimeout(run, 0);
+    });
   }, [rehome]);
 
   const unregister = useCallback(
@@ -191,8 +190,6 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
 
   const requestFocus = useCallback(
     (id: string) => {
-      // Only focusable if the node lives in the active (top) layer — this traps
-      // focus inside a modal and blocks hover/auto-focus from bleeding behind it.
       const n = nodes.current.get(id);
       if (n && n.layer === activeLayer()) setFocus(id);
     },
@@ -203,7 +200,6 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     (layer: number) => {
       savedFocusRef.current[layer] = focusedRef.current;
       layerStackRef.current.push(layer);
-      // Focus the layer's primary (autoFocus) node if it has one, else the first.
       const inLayer = Array.from(nodes.current.values()).filter((n) => n.layer === layer);
       const target = inLayer.find((n) => n.autoFocus) ?? inLayer[0];
       setFocus(target ? target.id : null);
@@ -222,128 +218,102 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     [setFocus],
   );
 
-  // Serialize moves: measuring is async (measureInWindow), so overlapping moves
-  // could read stale rects mid-scroll and pick the wrong neighbour. While one is
-  // resolving we remember only the latest pending direction and run it after.
-  const movingRef = useRef(false);
-  const pendingDirRef = useRef<RemoteKey | null>(null);
+  // Background: keep cached rects fresh after a move (scroll settles, new rows
+  // appear). Runs off the keypress path so navigation stays instant. The measure
+  // itself has a hard timeout in Focusable, so this can never hang either.
+  const refreshScheduled = useRef(false);
+  const scheduleRectRefresh = useCallback(() => {
+    if (refreshScheduled.current) return;
+    refreshScheduled.current = true;
+    raf(() => {
+      refreshScheduled.current = false;
+      const list = activeNodes();
+      list.forEach((n) => {
+        n.measure().then((r) => {
+          if (r) n.rect = r;
+        });
+      });
+    });
+  }, []);
 
-  const move = useCallback(
-    async (dir: RemoteKey) => {
-      if (movingRef.current) {
-        pendingDirRef.current = dir;
-        return;
-      }
-      movingRef.current = true;
-      try {
-        // Hard cap: even if moveOnce somehow stalls, the lock releases within
-        // 300ms so the remote can NEVER get permanently stuck ("cursor freezes
-        // after a while"). Per-measure timeouts already bound the normal path.
-        await Promise.race([moveOnce(dir), new Promise((r) => setTimeout(r, 300))]);
-      } finally {
-        movingRef.current = false;
-        const next = pendingDirRef.current;
-        pendingDirRef.current = null;
-        if (next) move(next);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  const moveOnce = useCallback(
-    async (dir: RemoteKey) => {
-      const layer = activeLayer();
-      // Only consider nodes in the active layer (modal trap) — never navigate behind.
-      const list = Array.from(nodes.current.values()).filter((n) => n.layer === layer);
-      if (!list.length) return;
-      const current = focusedRef.current ? nodes.current.get(focusedRef.current) : null;
-      // Measure fresh, but fall back to each node's last known rect when a measure
-      // returns null (view mid-layout / mid-scroll). A transient bad measure must
-      // never make navigation jump or lose the cursor — this kills the "sometimes
-      // it works, sometimes not" flicker.
-      const rects = await Promise.all(
-        list.map(async (n) => {
-          const fresh = await n.measure();
-          if (fresh) n.rect = fresh;
-          return { n, r: fresh ?? n.rect ?? null };
-        }),
-      );
-      const valid = rects.filter((x) => x.r) as { n: Node; r: Rect }[];
-
-      // Pick the node nearest to where focus last was (spatial re-home), used only
-      // when there is genuinely no current focus (it was null).
-      const nearestToAnchor = () => {
-        const a = focusedCenterRef.current;
-        if (!a) return valid[0];
-        let pick = valid[0];
-        let bestD = Infinity;
-        for (const v of valid) {
-          const c = center(v.r);
-          const d = (c.x - a.x) ** 2 + (c.y - a.y) ** 2;
-          if (d < bestD) {
-            bestD = d;
-            pick = v;
-          }
-        }
-        return pick;
-      };
-      const remember = (r: Rect) => {
-        focusedCenterRef.current = center(r);
-      };
-
-      if (!current) {
-        const p = nearestToAnchor();
-        if (p) {
-          remember(p.r);
-          setFocus(p.n.id);
-        }
-        return;
-      }
-      // Inside a modal (raised layer), navigate by registration order so a couple
-      // of buttons in a row are ALWAYS reachable — native Modals live in a separate
-      // window where measureInWindow is unreliable, so geometry alone can leave you
-      // stuck on one button ("couldn't move between Aggiorna and Più tardi").
-      const cycleInLayer = () => {
-        const ids = list.map((n) => n.id);
-        const idx = ids.indexOf(current.id);
-        if (idx < 0 || ids.length < 2) return;
-        const fwd = dir === 'right' || dir === 'down';
-        const nextIdx = (idx + (fwd ? 1 : -1) + ids.length) % ids.length;
-        setFocus(ids[nextIdx]);
-      };
-      const inModal = layer !== 0;
-
-      const fromRect = valid.find((x) => x.n.id === current.id)?.r;
-      if (!fromRect) {
-        // Current node couldn't be located this frame. In a modal, fall back to
-        // order cycling; on a normal screen keep focus put and retry next press.
-        if (inModal) cycleInLayer();
-        return;
-      }
-      let best: { id: string; cost: number; r: Rect } | null = null;
-      for (const { n, r } of valid) {
-        if (n.id === current.id) continue;
-        const cost = directionalCost(dir, fromRect, r);
-        if (cost < 0) continue;
-        if (!best || cost < best.cost) best = { id: n.id, cost, r };
-      }
-      if (best) {
-        remember(best.r);
-        setFocus(best.id);
-      } else if (inModal) {
-        // No directional neighbour found via geometry — cycle the modal's buttons.
-        cycleInLayer();
-      }
+  // Inside a modal (raised layer), navigate a row of buttons by registration
+  // order — robust where geometry can't help (native Modal = separate window).
+  const cycleInLayer = useCallback(
+    (dir: RemoteKey, list: Node[], current: Node) => {
+      const ids = list.map((n) => n.id);
+      const idx = ids.indexOf(current.id);
+      if (idx < 0 || ids.length < 2) return;
+      const fwd = dir === 'right' || dir === 'down';
+      const nextIdx = (idx + (fwd ? 1 : -1) + ids.length) % ids.length;
+      setFocus(ids[nextIdx]);
     },
     [setFocus],
   );
 
+  // SYNCHRONOUS move using cached rects — instant, never awaits, never hangs.
+  const move = useCallback(
+    (dir: RemoteKey) => {
+      const list = activeNodes();
+      if (list.length) {
+        const withRect = list.filter((n) => n.rect) as (Node & { rect: Rect })[];
+        const current = focusedRef.current ? nodes.current.get(focusedRef.current) : null;
+
+        const remember = (n: Node) => {
+          if (n.rect) savedCenterRef.current = center(n.rect);
+        };
+
+        if (!current || !current.rect) {
+          // No usable current position → nearest cached node to the anchor, else first.
+          if (withRect.length) {
+            const anchor = savedCenterRef.current;
+            let pick = withRect[0];
+            if (anchor) {
+              let bestD = Infinity;
+              for (const n of withRect) {
+                const c = center(n.rect);
+                const d = (c.x - anchor.x) ** 2 + (c.y - anchor.y) ** 2;
+                if (d < bestD) {
+                  bestD = d;
+                  pick = n;
+                }
+              }
+            }
+            remember(pick);
+            setFocus(pick.id);
+          } else if (current) {
+            // In a modal with no cached rects, still allow cycling by order.
+            cycleInLayer(dir, list, current);
+          }
+        } else {
+          const from = current.rect;
+          let best: (Node & { rect: Rect }) | null = null;
+          let bestCost = Infinity;
+          for (const n of withRect) {
+            if (n.id === current.id) continue;
+            const cost = directionalCost(dir, from, n.rect);
+            if (cost < 0) continue;
+            if (cost < bestCost) {
+              bestCost = cost;
+              best = n;
+            }
+          }
+          if (best) {
+            remember(best);
+            setFocus(best.id);
+          } else if (activeLayer() !== 0) {
+            // Inside a modal with no geometric neighbour → cycle the buttons by order.
+            cycleInLayer(dir, list, current);
+          }
+        }
+      }
+      // Refresh the cache for next time (scroll-follow just moved things).
+      scheduleRectRefresh();
+    },
+    [setFocus, scheduleRectRefresh, cycleInLayer],
+  );
+
   const dispatch = useCallback(
     (key: RemoteKey) => {
-      // A remote/keyboard key means we're in "key" mode → show focus rings.
-      setPointerMode(false);
-      // app-level handlers first (LIFO)
       for (let i = handlers.current.length - 1; i >= 0; i--) {
         if (handlers.current[i](key) === true) return;
       }
@@ -354,7 +324,7 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
         if (id) nodes.current.get(id)?.onSelect?.();
       }
     },
-    [move, setPointerMode],
+    [move],
   );
 
   const pushHandler = useCallback((h: KeyHandler) => {
@@ -388,8 +358,19 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   const value = useMemo<RemoteCtx>(
-    () => ({ register, unregister, requestFocus, subscribe, pushHandler, dispatch, setPointerMode, activateLayer, deactivateLayer }),
-    [register, unregister, requestFocus, subscribe, pushHandler, dispatch, setPointerMode, activateLayer, deactivateLayer],
+    () => ({
+      register,
+      unregister,
+      requestFocus,
+      reportRect,
+      subscribe,
+      pushHandler,
+      dispatch,
+      setPointerMode,
+      activateLayer,
+      deactivateLayer,
+    }),
+    [register, unregister, requestFocus, reportRect, subscribe, pushHandler, dispatch, setPointerMode, activateLayer, deactivateLayer],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -417,8 +398,8 @@ export function useFocusLayer() {
 
 /**
  * Wrap a modal's content in <FocusLayer> to TRAP the D-pad inside it: while
- * mounted, only Focusables rendered within it are reachable, and focus can't
- * bleed to the screen behind. On unmount, focus returns to where it was.
+ * mounted, only Focusables rendered within it are reachable. On unmount, focus
+ * returns to where it was.
  */
 export function FocusLayer({ children }: { children: React.ReactNode }) {
   const { activateLayer, deactivateLayer } = useRemote();
