@@ -171,10 +171,15 @@ export function Field({
       style={{ borderRadius: radius.md }}
       focusStyle={{}}
     >
-      {(ring, focusSelf) => (
+      {(ring, focusSelf) => {
+        const active = focused || ring; // selected via D-pad OR native keyboard focus
+        return (
         <View style={{ gap: 6 }}>
-          <Txt variant="small">{label}</Txt>
-          <View style={{ justifyContent: 'center' }}>
+          <Txt variant="small" color={active ? colors.accent : colors.textMuted}>
+            {active ? '▸ ' : ''}
+            {label}
+          </Txt>
+          <View style={[styles.fieldWrap, active && styles.fieldWrapActive]}>
             <TextInput
               ref={inputRef}
               value={value}
@@ -196,7 +201,7 @@ export function Field({
                 focusSelf();
               }}
               onBlur={() => setFocused(false)}
-              style={[styles.input, secureTextEntry && { paddingRight: 52 }, (focused || ring) && { borderColor: colors.borderFocus }]}
+              style={[styles.input, secureTextEntry && { paddingRight: 52 }, active && styles.inputActive]}
             />
             {secureTextEntry ? (
               <Focusable onSelect={() => setShow((v) => !v)} style={styles.eye} focusStyle={{ borderColor: colors.borderFocus, borderWidth: 1 }}>
@@ -205,7 +210,8 @@ export function Field({
             ) : null}
           </View>
         </View>
-      )}
+        );
+      }}
     </Focusable>
   );
 }
@@ -230,15 +236,28 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   ghostFocus: { borderColor: colors.borderFocus, backgroundColor: colors.surfaceHi },
+  fieldWrap: { justifyContent: 'center', borderRadius: radius.md },
+  fieldWrapActive: {
+    // Strong, unmistakable highlight for the selected field on a 10-foot screen.
+    shadowColor: colors.accent,
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
+    elevation: 10,
+  },
   input: {
     backgroundColor: colors.surface,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
     color: colors.text,
     fontSize: font.body,
+  },
+  inputActive: {
+    borderColor: colors.borderFocus,
+    borderWidth: 2.5,
+    backgroundColor: colors.surfaceHi,
   },
   eye: {
     position: 'absolute',
