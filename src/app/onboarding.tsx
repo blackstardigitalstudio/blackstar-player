@@ -126,6 +126,13 @@ export default function Onboarding() {
           <ModeChip label={t('ob.m3u')} icon="link" active={mode === 'm3u'} onPress={() => setMode('m3u')} />
         </View>
 
+        <View style={styles.kbHint}>
+          <Ionicons name="phone-portrait-outline" size={18} color={colors.accent} />
+          <Txt variant="tiny" color={colors.textMuted} style={{ flex: 1 }}>
+            {t('ob.typeHint')}
+          </Txt>
+        </View>
+
         <View style={styles.card}>
           <Field label={t('ob.profileName')} value={name} onChangeText={setName} placeholder={t('ob.profilePh')} autoCapitalize="sentences" />
 
@@ -210,6 +217,17 @@ function ModeChip({ label, icon, active, onPress }: { label: string; icon: any; 
 const styles = StyleSheet.create({
   wrap: { padding: spacing.xl, maxWidth: 640, width: '100%', alignSelf: 'center' },
   tabs: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  kbHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
   chip: {
     paddingVertical: 10,
     paddingHorizontal: spacing.md,

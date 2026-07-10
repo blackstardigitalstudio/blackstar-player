@@ -164,9 +164,19 @@ export function Field({
   const [show, setShow] = React.useState(false);
   const inputRef = React.useRef<TextInput>(null);
   const { dispatch } = useRemote();
+  // Reliably raise the on-screen keyboard (IME) on the box — pressing OK blurs
+  // then refocuses, which forces the IME open even when programmatic focus alone
+  // wouldn't. Once the IME is up, a phone (Google TV / Android TV Remote app) or a
+  // Bluetooth keyboard can type into it.
+  const openKeyboard = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.blur();
+    setTimeout(() => inputRef.current?.focus(), 40);
+  };
   return (
     <Focusable
-      onSelect={() => inputRef.current?.focus()}
+      onSelect={openKeyboard}
       onFocus={() => inputRef.current?.focus()}
       style={{ borderRadius: radius.md }}
       focusStyle={{}}

@@ -47,6 +47,8 @@ const it: Dict = {
   'ob.connecting': 'Connessione…',
   'ob.disclaimer':
     'Blackstar Player non fornisce contenuti né server: usa solo la lista o l’abbonamento che inserisci tu. Nessun dato lascia il dispositivo.',
+  'ob.typeHint':
+    'Per scrivere: seleziona un campo e premi OK per aprire la tastiera. Puoi digitare dal telefono con l’app “Google TV” o “Android TV Remote” collegata al box (tocca l’icona tastiera), oppure con una tastiera Bluetooth.',
   'ob.errM3uUrl': 'Inserisci l’URL della lista M3U.',
   'ob.errHttp': 'Errore caricamento lista (HTTP {code}).',
   'ob.errEmpty': 'Nessun canale trovato nella lista.',
@@ -262,6 +264,8 @@ const es: Dict = {
   'ob.connecting': 'Conectando…',
   'ob.disclaimer':
     'Blackstar Player no ofrece contenidos ni servidores: usa solo la lista o la suscripción que introduces tú. Ningún dato sale del dispositivo.',
+  'ob.typeHint':
+    'Para escribir: selecciona un campo y pulsa OK para abrir el teclado. Puedes teclear desde el móvil con la app “Google TV” o “Android TV Remote” conectada al box (toca el icono del teclado), o con un teclado Bluetooth.',
   'ob.errM3uUrl': 'Introduce la URL de la lista M3U.',
   'ob.errHttp': 'Error al cargar la lista (HTTP {code}).',
   'ob.errEmpty': 'No se han encontrado canales en la lista.',
