@@ -7,7 +7,7 @@ import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore } from '@/store/useStore';
 import { parseM3U } from '@/lib/m3u';
-import { loadXtreamFailover } from '@/lib/xtream';
+import { fetchTextTimeout, loadXtreamFailover } from '@/lib/xtream';
 import { useT } from '@/i18n';
 import type { SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -61,9 +61,11 @@ export default function Onboarding() {
       const createdAt = sources.find((s) => s.id === id)?.createdAt ?? Date.now();
       if (mode === 'm3u') {
         if (!m3uUrl.trim()) throw new Error(t('ob.errM3uUrl'));
-        const res = await fetch(m3uUrl.trim(), { headers: { 'User-Agent': 'BlackstarPlayer' } });
-        if (!res.ok) throw new Error(t('ob.errHttp', { code: res.status }));
-        const content = parseM3U(await res.text());
+        // Bounded fetch (connect + body) with an IPTV-friendly UA — a slow host
+        // can no longer hang first-run onboarding forever.
+        const { ok, status, text } = await fetchTextTimeout(m3uUrl.trim(), 15000);
+        if (!ok) throw new Error(t('ob.errHttp', { code: status }));
+        const content = parseM3U(text);
         if (!content.live.length && !content.movies.length && !content.series.length) {
           throw new Error(t('ob.errEmpty'));
         }
@@ -90,14 +92,12 @@ export default function Onboarding() {
           password: password.trim(),
           createdAt,
         };
-        // Tries each DNS in order until one authenticates and loads.
-        try {
-          const { content, host } = await loadXtreamFailover(src, liveExt);
-          src.host = host;
-          await addSource(src, content);
-        } catch {
-          throw new Error(t('ob.errGeneric'));
-        }
+        // Tries each DNS in order until one authenticates and loads. Let the
+        // real reason (invalid credentials / HTTP error / timeout) surface so the
+        // user knows what to fix instead of a vague generic message.
+        const { content, host } = await loadXtreamFailover(src, liveExt);
+        src.host = host;
+        await addSource(src, content);
       }
       if (editId) router.back();
       else router.replace('/(tabs)/home');

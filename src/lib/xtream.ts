@@ -31,19 +31,29 @@ export async function loadXtreamFailover(
   liveExt = 'ts',
 ): Promise<{ content: LoadedContent; host: string }> {
   const hosts = candidateHosts(c);
+  if (!hosts.length) throw new Error('Inserisci almeno un DNS server.');
+  let lastError: Error | null = null;
+  let authedFallback: { content: LoadedContent; host: string } | null = null;
   for (const host of hosts) {
     try {
-      await xtreamLogin({ ...c, host });
+      await xtreamLogin({ ...c, host }); // throws with the real reason (auth / HTTP)
       const content = await loadXtream({ ...c, host }, liveExt);
-      // Only accept a host that actually returned content; otherwise try next.
+      // Prefer a host that returned content, but remember one that at least
+      // authenticated — login succeeding with an empty catalog must NOT read as
+      // "login failed"; the user gets in and can refresh.
       if (content.live.length || content.movies.length || content.series.length) {
         return { content, host };
       }
-    } catch {
+      if (!authedFallback) authedFallback = { content, host };
+    } catch (e: any) {
+      lastError = e instanceof Error ? e : new Error(String(e?.message || e));
       // try next DNS
     }
   }
-  throw new Error('Impossibile caricare la lista: nessun DNS risponde.');
+  if (authedFallback) return authedFallback;
+  // Surface the real reason (invalid credentials, HTTP error, timeout) so the
+  // user knows what to fix — not a vague "impossibile".
+  throw lastError || new Error('Nessun DNS funzionante con queste credenziali.');
 }
 
 export function normalizeHost(input: string): string {
@@ -60,10 +70,15 @@ export function normalizeHost(input: string): string {
  * and the multi-DNS failover never advanced. The abort stays armed until the
  * body is fully read.
  */
+// Most Xtream/IPTV panels whitelist the standard okhttp user-agent (used by
+// TiviMate, IPTV Smarters, etc.) and REJECT unknown ones — a custom UA was a
+// common cause of "login failed". Use the widely-accepted one.
+export const IPTV_UA = 'okhttp/4.9.3';
+
 export async function fetchTextTimeout(
   url: string,
   ms = 8000,
-  headers: Record<string, string> = { 'User-Agent': 'BlackstarPlayer' },
+  headers: Record<string, string> = { 'User-Agent': IPTV_UA },
 ): Promise<{ ok: boolean; status: number; text: string }> {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), ms);
@@ -71,6 +86,10 @@ export async function fetchTextTimeout(
     const res = await fetch(url, { headers, signal: ctrl.signal });
     const text = await res.text(); // still under the timeout
     return { ok: res.ok, status: res.status, text };
+  } catch (e: any) {
+    // Turn raw fetch failures into a message the user can act on.
+    if (e?.name === 'AbortError') throw new Error('Timeout: il server non risponde (DNS lento o errato).');
+    throw new Error('Impossibile raggiungere il server. Controlla il DNS/indirizzo e la connessione.');
   } finally {
     clearTimeout(id);
   }
