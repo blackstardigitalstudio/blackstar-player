@@ -32,6 +32,7 @@ export default function Onboarding() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoFocusHost, setAutoFocusHost] = useState<number>(-1);
 
   // Edit mode: prefill the form from the existing source.
   useEffect(() => {
@@ -50,7 +51,11 @@ export default function Onboarding() {
   }, [editId]);
 
   const setHostAt = (i: number, val: string) => setHosts((h) => h.map((x, j) => (j === i ? val : x)));
-  const addHost = () => setHosts((h) => (h.length < MAX_DNS ? [...h, ''] : h));
+  const addHost = () => {
+    if (hosts.length >= MAX_DNS) return;
+    setAutoFocusHost(hosts.length); // focus + open keyboard on the DNS just added
+    setHosts((h) => [...h, '']);
+  };
   const removeHost = (i: number) => setHosts((h) => h.filter((_, j) => j !== i));
 
   async function submit() {
@@ -160,6 +165,7 @@ export default function Onboarding() {
                         onChangeText={(val) => setHostAt(i, val)}
                         placeholder="http://dns.server:8080"
                         keyboardType="url"
+                        autoFocus={i === autoFocusHost}
                       />
                     </View>
                     {i > 0 ? (

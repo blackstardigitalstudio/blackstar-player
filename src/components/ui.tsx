@@ -153,6 +153,7 @@ export function Field({
   secureTextEntry,
   keyboardType,
   autoCapitalize = 'none',
+  autoFocus,
 }: {
   label: string;
   value: string;
@@ -161,6 +162,7 @@ export function Field({
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'url' | 'email-address';
   autoCapitalize?: 'none' | 'sentences';
+  autoFocus?: boolean;
 }) {
   const [focused, setFocused] = React.useState(false);
   const [show, setShow] = React.useState(false);
@@ -193,6 +195,7 @@ export function Field({
   }, [focused, scroll]);
   return (
     <Focusable
+      autoFocus={autoFocus}
       onSelect={openKeyboard}
       onFocus={() => inputRef.current?.focus()}
       style={{ borderRadius: radius.md }}
