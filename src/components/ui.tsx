@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
 import { useRemote } from '@/tv/RemoteProvider';
+import { useFocusScroll } from '@/tv/FocusScroll';
 import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
 
 type TxtProps = {
@@ -174,6 +176,21 @@ export function Field({
     el.blur();
     setTimeout(() => inputRef.current?.focus(), 40);
   };
+  // When the on-screen keyboard opens over a focused field, scroll the field up
+  // so it stays visible above the keyboard (you can see what you type).
+  const scroll = useFocusScroll();
+  React.useEffect(() => {
+    if (!focused) return;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      // small delay so the layout has resized before we measure/scroll
+      setTimeout(() => {
+        inputRef.current?.measureInWindow((x, y, w, h) => {
+          if (w || h) scroll?.scrollToRect({ x, y, w, h });
+        });
+      }, 60);
+    });
+    return () => sub.remove();
+  }, [focused, scroll]);
   return (
     <Focusable
       onSelect={openKeyboard}
