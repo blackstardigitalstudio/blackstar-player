@@ -8,6 +8,7 @@ export const KEYS = {
   settings: 'bs.settings',
   profiles: 'bs.profiles',
   activeProfile: 'bs.activeProfileId',
+  lastLive: 'bs.lastLiveId',
   // per-profile data
   fav: (p: string) => `bs.fav.${p}`,
   recents: (p: string) => `bs.recents.${p}`,

@@ -65,6 +65,9 @@ export default function SeriesDetail() {
   if (!item) {
     return (
       <Screen>
+        <View style={{ padding: spacing.lg }}>
+          <GhostButton label={t('common.back')} icon="arrow-back" onPress={() => router.back()} />
+        </View>
         <Empty title={t('sd.notFound')} />
       </Screen>
     );

@@ -148,7 +148,7 @@ export default function Guide() {
   };
 
   if (!content.live.length) {
-    return <Empty icon="grid-outline" title={t('guide.title')} hint={t('guide.onlyXtream')} />;
+    return <Empty icon="grid-outline" title={t('guide.title')} hint={t('guide.noChannels')} />;
   }
 
   const listH = Math.max(0, gridH - HEADER_H);

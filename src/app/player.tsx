@@ -51,6 +51,7 @@ export default function Player() {
   const activeId = useStore((s) => s.activeId);
   const settings = useStore((s) => s.settings);
   const addRecent = useStore((s) => s.addRecent);
+  const setLastLive = useStore((s) => s.setLastLive);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
   const favorites = useStore((s) => s.favorites);
   const saveProgress = useStore((s) => s.saveProgress);
@@ -85,6 +86,16 @@ export default function Player() {
   const player = useVideoPlayer(cur.candidates[0] ? buildSource(cur.candidates[0]) : null, (p) => {
     p.play();
   });
+
+  // No playable URL (missing stream) → show the error+retry+back card immediately
+  // instead of an infinite spinner with no way out.
+  useEffect(() => {
+    if (!cur.candidates.length) {
+      setBuffering(false);
+      setError(t('pl.unavailable'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cur.candidates.length]);
 
   // Resume context: movies & episodes remember the exact position ("Continua a guardare").
   const progressCtx = useMemo(() => {
@@ -122,6 +133,11 @@ export default function Player() {
     if (initial.item) addRecent({ ...initial.item });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Remember the last live channel (for "auto-start last channel on open").
+  useEffect(() => {
+    if (cur.isLive && cur.item) setLastLive(cur.item.id);
+  }, [cur.isLive, cur.item, setLastLive]);
 
   // status / error handling with survival-mode retry
   useEffect(() => {

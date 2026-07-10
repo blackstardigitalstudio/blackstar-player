@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getLocales } from 'expo-localization';
 import type { Lang } from '@/i18n/strings';
 import { parseM3U } from '@/lib/m3u';
-import { loadXtreamFailover } from '@/lib/xtream';
+import { fetchTextTimeout, loadXtreamFailover } from '@/lib/xtream';
 import {
   KEYS,
   cacheContent,
@@ -147,6 +147,7 @@ export const useStore = create<State>((set, get) => ({
       getJSON<Profile[]>(KEYS.profiles, []),
       getJSON<string | null>(KEYS.activeProfile, null),
     ]);
+    const lastLiveId = await getJSON<string | null>(KEYS.lastLive, null);
 
     // Ensure at least one profile exists.
     let profiles = profilesRaw;
@@ -166,6 +167,7 @@ export const useStore = create<State>((set, get) => ({
       settings: { ...DEFAULT_SETTINGS, ...settings },
       profiles,
       activeProfileId,
+      lastLiveId,
       ...data,
       hydrated: true,
     });
@@ -243,14 +245,17 @@ export const useStore = create<State>((set, get) => ({
     const src = sources.find((s) => s.id === activeId);
     if (!src) return;
     const ageMs = Date.now() - content.loadedAt;
-    if (!force && content.loadedAt && ageMs < settings.autoCleanupHours * 3600_000) return;
+    // A partially-loaded catalog (some endpoints failed) is only "fresh" for a
+    // few minutes so we retry soon instead of being stuck on it for hours.
+    const ttlMs = content.partial ? 5 * 60_000 : settings.autoCleanupHours * 3600_000;
+    if (!force && content.loadedAt && ageMs < ttlMs) return;
     set({ loading: true, error: null });
     try {
       let loaded: LoadedContent;
       if (src.type === 'm3u') {
-        const res = await fetch(src.m3uUrl || '', { headers: { 'User-Agent': 'BlackstarPlayer' } });
-        if (!res.ok) throw new Error(`Errore caricamento lista (HTTP ${res.status})`);
-        loaded = parseM3U(await res.text());
+        const { ok, status, text } = await fetchTextTimeout(src.m3uUrl || '', 15000);
+        if (!ok) throw new Error(`Errore caricamento lista (HTTP ${status})`);
+        loaded = parseM3U(text);
       } else {
         const { content: c, host } = await loadXtreamFailover(src, settings.liveExt);
         loaded = c;
@@ -260,9 +265,12 @@ export const useStore = create<State>((set, get) => ({
           set({ sources: updated });
         }
       }
+      // Race guard: if the user switched source while this was loading, discard.
+      if (get().activeId !== activeId) return;
       set({ content: loaded, loading: false });
       await cacheContent(activeId, loaded);
     } catch (e: any) {
+      if (get().activeId !== activeId) return;
       set({ loading: false, error: e?.message || 'Impossibile caricare la lista' });
     }
   },
@@ -283,7 +291,9 @@ export const useStore = create<State>((set, get) => ({
   addRecent: async (item) => {
     const pid = get().activeProfileId;
     if (!pid) return;
-    const recents = [item, ...get().recents.filter((r) => r.id !== item.id)].slice(0, 40);
+    // Strip the heavy episode list before persisting (kept only in the live catalog).
+    const slim = { ...item, _eps: undefined } as MediaItem;
+    const recents = [slim, ...get().recents.filter((r) => r.id !== item.id)].slice(0, 40);
     set({ recents });
     await setJSON(KEYS.recents(pid), recents);
     // learn taste from the item's category/genre
@@ -297,6 +307,7 @@ export const useStore = create<State>((set, get) => ({
 
   setLastLive: async (id) => {
     set({ lastLiveId: id });
+    await setJSON(KEYS.lastLive, id);
   },
 
   clearRecents: async () => {

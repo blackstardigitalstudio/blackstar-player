@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, BackHandler, StyleSheet, View } from 'react-native';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { ContinueRail } from '@/components/ContinueRail';
 import { Rail } from '@/components/Rail';
@@ -17,6 +17,9 @@ import { becauseYouWatched, itemsInCategory, topCategories } from '@/lib/recomme
 import { useT } from '@/i18n';
 import type { MediaItem } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
+
+// Fires the auto-start-last-channel at most once per app launch (module scope).
+let autoStartedThisLaunch = false;
 
 function Folder({ label, icon, color, count, onPress }: { label: string; icon: any; color: string; count?: number; onPress: () => void }) {
   return (
@@ -51,8 +54,31 @@ export default function Home() {
   const favorites = useStore((s) => s.favorites);
   const progress = useStore((s) => s.progress);
   const taste = useStore((s) => s.taste);
+  const bannerText = useStore((s) => s.settings.bannerText);
+  const autoStart = useStore((s) => s.settings.autoStartLastChannel);
+  const lastLiveId = useStore((s) => s.lastLiveId);
+  const confirmExit = useStore((s) => s.settings.confirmExit);
 
-  const pool = useMemo(() => [...content.movies, ...content.series, ...content.live], [content]);
+  // Ask before exiting the app from Home (only while Home is focused). Elsewhere
+  // BACK just navigates back.
+  useFocusEffect(
+    useCallback(() => {
+      const onBack = () => {
+        if (!confirmExit) return false; // let the OS close the app
+        Alert.alert('Blackstar Player', t('exit.confirm'), [
+          { text: t('pin.cancel'), style: 'cancel' },
+          { text: t('exit.yes'), style: 'destructive', onPress: () => BackHandler.exitApp() },
+        ]);
+        return true; // consume back
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+      return () => sub.remove();
+    }, [confirmExit, t]),
+  );
+
+  // Recommendations pool = VOD only (movies+series), capped, so the taste engine
+  // never tokenizes a 10k-channel live list on the render path (was a real hitch).
+  const pool = useMemo(() => [...content.movies, ...content.series].slice(0, 2500), [content.movies, content.series]);
   const recommended = useMemo(() => recommendFromRecents(recents, pool), [recents, pool]);
   const continueList = useMemo(
     () => Object.values(progress).filter((p) => p.position > 5).sort((a, b) => b.updatedAt - a.updatedAt),
@@ -110,12 +136,24 @@ export default function Home() {
   );
 
   const go = (item: MediaItem) => play.open(item);
-  const hasAny = pool.length > 0;
+  const hasAny = content.live.length + content.movies.length + content.series.length > 0;
+
+  // Auto-start the last live channel once per app launch (opt-in). Fires only when
+  // content is loaded and the channel still exists; the player's Back returns here.
+  useEffect(() => {
+    if (autoStartedThisLaunch) return;
+    if (!autoStart || !lastLiveId || !content.live.length) return;
+    const ch = content.live.find((c) => c.id === lastLiveId);
+    if (ch) {
+      autoStartedThisLaunch = true;
+      play.open(ch);
+    }
+  }, [autoStart, lastLiveId, content.live, play]);
 
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.header}>
-        <Txt variant="h2">Blackstar</Txt>
+        <Txt variant="h2" numberOfLines={1}>{bannerText || 'Blackstar'}</Txt>
         <GhostButton label={t('common.refresh')} icon="refresh" onPress={() => useStore.getState().refresh(true)} />
       </View>
 

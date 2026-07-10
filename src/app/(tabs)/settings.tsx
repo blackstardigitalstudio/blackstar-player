@@ -66,7 +66,7 @@ export default function Settings() {
   const s = useStore();
   const active = s.sources.find((x) => x.id === s.activeId);
 
-  const [pinMode, setPinMode] = useState<null | 'disable' | 'unlock' | 'setnew' | 'enableset'>(null);
+  const [pinMode, setPinMode] = useState<null | 'disable' | 'unlock' | 'setnew' | 'enableset' | 'changeold'>(null);
   const pinTitle = pinMode === 'setnew' || pinMode === 'enableset' ? t('pin.set') : t('pin.enter');
 
   const handlePin = (pin: string): boolean | void => {
@@ -77,6 +77,11 @@ export default function Settings() {
     } else if (pinMode === 'unlock') {
       if (pin !== s.settings.pin) return false;
       s.setUnlocked(true);
+    } else if (pinMode === 'changeold') {
+      // Must prove the CURRENT pin before choosing a new one (no silent bypass).
+      if (pin !== s.settings.pin) return false;
+      setPinMode('setnew');
+      return; // keep the modal open for the new pin
     } else if (pinMode === 'setnew') {
       if (pin.length < 4) return false;
       s.updateSettings({ pin });
@@ -100,6 +105,14 @@ export default function Settings() {
     const ok = await openCastSettings();
     if (!ok) Alert.alert('Blackstar Player', t('cast.notSupported'));
   };
+
+  // Confirm before any irreversible action (a single accidental OK on the remote
+  // must not wipe a list/profile/history).
+  const confirm = (message: string, onYes: () => void) =>
+    Alert.alert('Blackstar Player', message, [
+      { text: t('pin.cancel'), style: 'cancel' },
+      { text: t('common.remove'), style: 'destructive', onPress: onYes },
+    ]);
 
   const aspectLabel = { contain: t('set.aspectContain'), cover: t('set.aspectCover'), fill: t('set.aspectFill') }[s.settings.aspectMode];
   const playerLabel = (m: PlayerMode) =>
@@ -128,7 +141,7 @@ export default function Settings() {
             icon="person-remove"
             label={t('set.removeProfileUser', { name: s.profiles.find((p) => p.id === s.activeProfileId)?.name || '' })}
             danger
-            onPress={() => s.removeProfile(s.activeProfileId!)}
+            onPress={() => confirm(t('confirm.removeProfile'), () => s.removeProfile(s.activeProfileId!))}
           />
         ) : null}
       </Section>
@@ -154,7 +167,7 @@ export default function Settings() {
           <Row icon="create" label={t('set.editSource')} onPress={() => router.push({ pathname: '/onboarding', params: { sourceId: active.id } })} />
         ) : null}
         {active ? (
-          <Row icon="trash" label={t('set.removeProfile', { name: active.name })} danger onPress={() => s.removeSource(active.id)} />
+          <Row icon="trash" label={t('set.removeProfile', { name: active.name })} danger onPress={() => confirm(t('confirm.removeSource'), () => s.removeSource(active.id))} />
         ) : null}
       </Section>
 
@@ -166,7 +179,7 @@ export default function Settings() {
           value={`${s.settings.autoCleanupHours} h`}
           onPress={() => s.updateSettings({ autoCleanupHours: s.settings.autoCleanupHours >= 24 ? 3 : s.settings.autoCleanupHours + 3 })}
         />
-        <Row icon="trash-bin" label={t('set.clearCache')} onPress={() => s.clearCache()} />
+        <Row icon="trash-bin" label={t('set.clearCache')} onPress={() => confirm(t('confirm.clearCache'), () => s.clearCache())} />
       </Section>
 
       <Section title={t('set.secPlayback')}>
@@ -215,12 +228,6 @@ export default function Settings() {
           onPress={() => router.push('/categories')}
         />
         <Row
-          icon="keypad"
-          label={t('set.showNumbers')}
-          value={s.settings.showChannelNumbers ? t('common.on') : t('common.off')}
-          onPress={() => s.updateSettings({ showChannelNumbers: !s.settings.showChannelNumbers })}
-        />
-        <Row
           icon="exit"
           label={t('set.confirmExit')}
           value={s.settings.confirmExit ? t('common.on') : t('common.off')}
@@ -239,7 +246,7 @@ export default function Settings() {
           <Row icon="lock-open" label={t('set.unlock')} onPress={() => setPinMode('unlock')} />
         ) : null}
         {s.settings.parentalEnabled ? (
-          <Row icon="key" label={t('set.changePin')} onPress={() => setPinMode('setnew')} />
+          <Row icon="key" label={t('set.changePin')} onPress={() => setPinMode(s.settings.pin ? 'changeold' : 'setnew')} />
         ) : null}
       </Section>
 
@@ -255,8 +262,8 @@ export default function Settings() {
       </Section>
 
       <Section title={t('set.secHistory')}>
-        <Row icon="play-skip-forward" label={t('set.clearContinue', { n: Object.keys(s.progress).length })} danger onPress={() => s.clearProgress()} />
-        <Row icon="time-outline" label={t('set.clearHistory', { n: s.recents.length })} danger onPress={() => s.clearRecents()} />
+        <Row icon="play-skip-forward" label={t('set.clearContinue', { n: Object.keys(s.progress).length })} danger onPress={() => confirm(t('confirm.clearContinue'), () => s.clearProgress())} />
+        <Row icon="time-outline" label={t('set.clearHistory', { n: s.recents.length })} danger onPress={() => confirm(t('confirm.clearHistory'), () => s.clearRecents())} />
       </Section>
 
       <Section title={t('set.secInfo')}>

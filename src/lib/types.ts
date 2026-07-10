@@ -93,4 +93,6 @@ export interface LoadedContent {
   series: MediaItem[];
   categories: Category[];
   loadedAt: number;
+  /** True when some endpoints failed (not just empty) → cache briefly, retry soon. */
+  partial?: boolean;
 }

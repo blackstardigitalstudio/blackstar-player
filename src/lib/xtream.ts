@@ -53,12 +53,24 @@ export function normalizeHost(input: string): string {
   return h.replace(/\/+$/, '');
 }
 
-/** fetch with a hard timeout so a dead DNS fails fast and failover can proceed. */
-async function fetchT(url: string, ms = 8000): Promise<Response> {
+/**
+ * Fetch text with a hard timeout that covers the ENTIRE exchange — connect,
+ * headers AND body. The old version cleared the timer as soon as headers
+ * arrived, so a host that returned "200 OK" then stalled the body hung forever
+ * and the multi-DNS failover never advanced. The abort stays armed until the
+ * body is fully read.
+ */
+export async function fetchTextTimeout(
+  url: string,
+  ms = 8000,
+  headers: Record<string, string> = { 'User-Agent': 'BlackstarPlayer' },
+): Promise<{ ok: boolean; status: number; text: string }> {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { headers: { 'User-Agent': 'BlackstarPlayer' }, signal: ctrl.signal });
+    const res = await fetch(url, { headers, signal: ctrl.signal });
+    const text = await res.text(); // still under the timeout
+    return { ok: res.ok, status: res.status, text };
   } finally {
     clearTimeout(id);
   }
@@ -73,12 +85,11 @@ function apiBase(c: SourceConfig) {
 
 async function api<T>(c: SourceConfig, action: string, extra = ''): Promise<T> {
   const url = `${apiBase(c)}&action=${action}${extra}`;
-  const res = await fetchT(url);
-  if (!res.ok) throw new Error(`Server Xtream: HTTP ${res.status}`);
-  const txt = await res.text();
-  if (!txt) return [] as unknown as T;
+  const { ok, status, text } = await fetchTextTimeout(url);
+  if (!ok) throw new Error(`Server Xtream: HTTP ${status}`);
+  if (!text) return [] as unknown as T;
   try {
-    return JSON.parse(txt) as T;
+    return JSON.parse(text) as T;
   } catch {
     throw new Error('Risposta non valida dal server Xtream');
   }
@@ -90,9 +101,12 @@ export async function xtreamLogin(c: SourceConfig): Promise<{ name: string; expD
   const url = `${host}/player_api.php?username=${encodeURIComponent(c.username || '')}&password=${encodeURIComponent(
     c.password || '',
   )}`;
-  const res = await fetchT(url);
-  if (!res.ok) throw new Error(`Connessione fallita (HTTP ${res.status}). Controlla il DNS server.`);
-  const data = await res.json().catch(() => null);
+  const { ok, status, text } = await fetchTextTimeout(url);
+  if (!ok) throw new Error(`Connessione fallita (HTTP ${status}). Controlla il DNS server.`);
+  let data: any = null;
+  try {
+    data = JSON.parse(text);
+  } catch {}
   const auth = data?.user_info?.auth;
   if (!data || auth === 0 || auth === '0') {
     throw new Error('Username o password non validi.');
@@ -131,23 +145,35 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
   ]);
 
   const categories: Category[] = [
-    ...liveCats.map((x) => ({ id: `live:${x.category_id}`, name: x.category_name, kind: 'live' as const })),
-    ...vodCats.map((x) => ({ id: `movie:${x.category_id}`, name: x.category_name, kind: 'movie' as const })),
-    ...serCats.map((x) => ({ id: `series:${x.category_id}`, name: x.category_name, kind: 'series' as const })),
+    ...liveCats.map((x) => ({ id: `live:${x.category_id}`, name: String(x.category_name || '—'), kind: 'live' as const })),
+    ...vodCats.map((x) => ({ id: `movie:${x.category_id}`, name: String(x.category_name || '—'), kind: 'movie' as const })),
+    ...serCats.map((x) => ({ id: `series:${x.category_id}`, name: String(x.category_name || '—'), kind: 'series' as const })),
   ];
-  const catName = (kind: string, id: any) =>
-    categories.find((c2) => c2.id === `${kind}:${id}`)?.name;
+  // O(1) category-name lookup (was O(items × categories) → seconds on huge lists).
+  const catMap = new Map(categories.map((c2) => [c2.id, c2.name]));
+  const catName = (kind: string, id: any) => (id != null ? catMap.get(`${kind}:${id}`) : undefined);
 
+  // Track real failures separately from empty results so a partial outage (Live
+  // up, VOD/Series down) is not cached as a complete catalog for hours.
+  let partial = false;
+  const call = async (action: string) => {
+    try {
+      return await api<any[]>(c, action);
+    } catch {
+      partial = true;
+      return [] as any[];
+    }
+  };
   const [liveRaw, vodRaw, serRaw] = await Promise.all([
-    api<any[]>(c, 'get_live_streams').catch(() => []),
-    api<any[]>(c, 'get_vod_streams').catch(() => []),
-    api<any[]>(c, 'get_series').catch(() => []),
+    call('get_live_streams'),
+    call('get_vod_streams'),
+    call('get_series'),
   ]);
 
   const live: MediaItem[] = liveRaw.map((x, i) => ({
     id: `live:${x.stream_id}`,
     kind: 'live',
-    name: x.name,
+    name: String(x.name || 'Senza nome'),
     logo: x.stream_icon || undefined,
     streamId: String(x.stream_id),
     url: liveUrl(c, x.stream_id, liveExt),
@@ -160,7 +186,7 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
   const movies: MediaItem[] = vodRaw.map((x) => ({
     id: `movie:${x.stream_id}`,
     kind: 'movie',
-    name: x.name,
+    name: String(x.name || 'Senza nome'),
     logo: x.stream_icon || x.cover || x.cover_big || x.movie_image || undefined,
     streamId: String(x.stream_id),
     containerExt: x.container_extension || 'mp4',
@@ -174,7 +200,7 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
   const series: MediaItem[] = serRaw.map((x) => ({
     id: `series:${x.series_id}`,
     kind: 'series',
-    name: x.name,
+    name: String(x.name || 'Senza nome'),
     logo: x.cover || x.cover_big || x.stream_icon || undefined,
     seriesId: String(x.series_id),
     plot: x.plot || undefined,
@@ -184,7 +210,7 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     categoryName: catName('series', x.category_id),
   }));
 
-  return { live, movies, series, categories, loadedAt: Date.now() };
+  return { live, movies, series, categories, loadedAt: Date.now(), partial };
 }
 
 /** Lazily resolve seasons/episodes for a series. */

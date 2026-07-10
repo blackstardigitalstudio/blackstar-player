@@ -17,7 +17,7 @@ const MODES: { key: CatOrder; i18n: string }[] = [
   { key: 'manual', i18n: 'cat.manual' },
 ];
 
-const KIND_LABEL: Record<string, string> = { live: 'Live', movie: 'Film', series: 'Serie' };
+const KIND_NAV: Record<string, string> = { live: 'nav.live', movie: 'nav.movies', series: 'nav.series' };
 
 export default function Categories() {
   const router = useRouter();
@@ -85,7 +85,7 @@ export default function Categories() {
                     <Txt variant="body" numberOfLines={1}>
                       {c.name}
                     </Txt>
-                    <Txt variant="tiny">{KIND_LABEL[c.kind]}</Txt>
+                    <Txt variant="tiny">{t(KIND_NAV[c.kind] || 'nav.live')}</Txt>
                   </View>
                   <Focusable onSelect={() => move(i, -1)} style={styles.arrow} focusStyle={styles.arrowFocus}>
                     <Ionicons name="chevron-up" size={20} color={colors.text} />
