@@ -5,6 +5,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { colors, font, gradients, radius } from '@/theme/tokens';
 import type { MediaItem } from '@/lib/types';
+import { useStore } from '@/store/useStore';
 import { Txt } from './ui';
 
 // Square thumbnails: uniform, images shown with "contain" (never cropped/zoomed).
@@ -76,10 +77,11 @@ export function PosterCard({ item, focused }: { item: MediaItem; focused: boolea
 }
 
 export function ChannelCard({ item, focused }: { item: MediaItem; focused: boolean }) {
+  const showNumbers = useStore((s) => s.settings.showChannelNumbers);
   return (
     <View style={{ width: TILE_W }}>
       <Square item={item} focused={focused} fallbackIcon="tv" />
-      {typeof item.number === 'number' ? (
+      {showNumbers && typeof item.number === 'number' ? (
         <View style={styles.num}>
           <Txt variant="tiny" color={colors.text}>
             {item.number}
