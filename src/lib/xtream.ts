@@ -46,7 +46,11 @@ export async function loadXtreamFailover(
       }
       if (!authedFallback) authedFallback = { content, host };
     } catch (e: any) {
-      lastError = e instanceof Error ? e : new Error(String(e?.message || e));
+      const msg = e?.message || String(e);
+      // Include the host that failed so the user (and support) can see exactly
+      // what was tried — the #1 cause of "impossibile raggiungere" is a mistyped
+      // DNS/port.
+      lastError = new Error(`${msg}\n(${normalizeHost(host)})`);
       // try next DNS
     }
   }
@@ -57,10 +61,19 @@ export async function loadXtreamFailover(
 }
 
 export function normalizeHost(input: string): string {
-  let h = input.trim();
+  let h = (input || '').trim().replace(/\s+/g, '');
   if (!h) return h;
   if (!/^https?:\/\//i.test(h)) h = 'http://' + h;
-  return h.replace(/\/+$/, '');
+  // Keep ONLY scheme + host + port. This way, whether the user types
+  // "dns.xyz:8080", "http://dns.xyz:8080/", or even pastes the whole
+  // "http://dns.xyz:8080/get.php?username=...", we always hit
+  // "http://dns.xyz:8080/player_api.php" correctly.
+  try {
+    const u = new URL(h);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return h.replace(/\/+$/, '');
+  }
 }
 
 /**
