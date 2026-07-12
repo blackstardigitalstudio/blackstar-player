@@ -11,9 +11,11 @@ import { Txt } from './ui';
 const ITEMS = [
   { key: 'home', icon: 'home', path: '/(tabs)/home' },
   { key: 'live', icon: 'tv', path: '/(tabs)/live' },
+  // Guida TV (EPG) = a LIVE-TV feature, so it lives next to Live, not stranded
+  // after Serie where it looked like a "series guide".
+  { key: 'guide', icon: 'grid', path: '/(tabs)/guide' },
   { key: 'movies', icon: 'film', path: '/(tabs)/movies' },
   { key: 'series', icon: 'albums', path: '/(tabs)/series' },
-  { key: 'guide', icon: 'grid', path: '/(tabs)/guide' },
   { key: 'search', icon: 'search', path: '/(tabs)/search' },
   { key: 'settings', icon: 'settings', path: '/(tabs)/settings' },
 ] as const;
