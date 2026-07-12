@@ -13,7 +13,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
 import { useRemote } from '@/tv/RemoteProvider';
 import { useFocusScroll } from '@/tv/FocusScroll';
@@ -46,10 +46,22 @@ export function Txt({ children, style, variant = 'body', color, numberOfLines }:
 }
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  // Plain View + safe-area INSETS hook instead of the SafeAreaView component:
+  // on the New Architecture (Fabric) that component desyncs measureInWindow /
+  // touch hit-boxes from where children paint (the D-pad engine's cached rects
+  // were offset ~1 status-bar; pointer taps landed on the wrong element). The
+  // hook keeps layout, paint, measurement and touch aligned.
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={[styles.screen, style]} edges={['top', 'bottom', 'left', 'right']}>
+    <View
+      style={[
+        styles.screen,
+        { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right },
+        style,
+      ]}
+    >
       {children}
-    </SafeAreaView>
+    </View>
   );
 }
 

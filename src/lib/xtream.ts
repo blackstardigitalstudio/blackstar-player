@@ -1,4 +1,4 @@
-import type { Category, Episode, LoadedContent, MediaItem, Season, SourceConfig } from './types';
+import type { Category, Episode, LoadedContent, MediaItem, MediaKind, Season, SourceConfig } from './types';
 
 /** Ordered, de-duplicated list of DNS hosts to try (active host first). */
 export function candidateHosts(c: SourceConfig): string[] {
@@ -176,10 +176,15 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     api<any[]>(c, 'get_series_categories').catch(() => []),
   ]);
 
+  // Some panels return a non-array (an object or an error blob) for an empty
+  // section. Mapping that throws and the whole load crashes ("mi butta fuori"),
+  // and no categories are built ("non crea le cartelle"). Guard every response.
+  const arr = (x: any): any[] => (Array.isArray(x) ? x : []);
+
   const categories: Category[] = [
-    ...liveCats.map((x) => ({ id: `live:${x.category_id}`, name: String(x.category_name || '—'), kind: 'live' as const })),
-    ...vodCats.map((x) => ({ id: `movie:${x.category_id}`, name: String(x.category_name || '—'), kind: 'movie' as const })),
-    ...serCats.map((x) => ({ id: `series:${x.category_id}`, name: String(x.category_name || '—'), kind: 'series' as const })),
+    ...arr(liveCats).map((x) => ({ id: `live:${x.category_id}`, name: String(x.category_name || '—'), kind: 'live' as const })),
+    ...arr(vodCats).map((x) => ({ id: `movie:${x.category_id}`, name: String(x.category_name || '—'), kind: 'movie' as const })),
+    ...arr(serCats).map((x) => ({ id: `series:${x.category_id}`, name: String(x.category_name || '—'), kind: 'series' as const })),
   ];
   // O(1) category-name lookup (was O(items × categories) → seconds on huge lists).
   const catMap = new Map(categories.map((c2) => [c2.id, c2.name]));
@@ -202,7 +207,7 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     call('get_series'),
   ]);
 
-  const live: MediaItem[] = liveRaw.map((x, i) => ({
+  const live: MediaItem[] = arr(liveRaw).map((x, i) => ({
     id: `live:${x.stream_id}`,
     kind: 'live',
     name: String(x.name || 'Senza nome'),
@@ -215,7 +220,7 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     categoryName: catName('live', x.category_id),
   }));
 
-  const movies: MediaItem[] = vodRaw.map((x) => ({
+  const movies: MediaItem[] = arr(vodRaw).map((x) => ({
     id: `movie:${x.stream_id}`,
     kind: 'movie',
     name: String(x.name || 'Senza nome'),
@@ -229,7 +234,7 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     categoryName: catName('movie', x.category_id),
   }));
 
-  const series: MediaItem[] = serRaw.map((x) => ({
+  const series: MediaItem[] = arr(serRaw).map((x) => ({
     id: `series:${x.series_id}`,
     kind: 'series',
     name: String(x.name || 'Senza nome'),
@@ -241,6 +246,25 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     categoryId: x.category_id ? `series:${x.category_id}` : undefined,
     categoryName: catName('series', x.category_id),
   }));
+
+  // FALLBACK: if the panel's categories endpoint returned nothing (or fewer
+  // categories than the streams actually reference), rebuild the missing folders
+  // from the streams' own category_id so Live/Film/Serie are always divided —
+  // never "all channels, no folders". Uses the real name when the categories
+  // endpoint provided it, otherwise a numbered label.
+  const ensureCategories = (items: MediaItem[], kind: MediaKind) => {
+    const known = new Set(categories.filter((c) => c.kind === kind).map((c) => c.id));
+    const added = new Map<string, string>();
+    for (const it of items) {
+      if (!it.categoryId || known.has(it.categoryId) || added.has(it.categoryId)) continue;
+      const rawId = it.categoryId.slice(it.categoryId.indexOf(':') + 1);
+      added.set(it.categoryId, it.categoryName || `Categoria ${rawId}`);
+    }
+    for (const [id, name] of added) categories.push({ id, name, kind });
+  };
+  ensureCategories(live, 'live');
+  ensureCategories(movies, 'movie');
+  ensureCategories(series, 'series');
 
   return { live, movies, series, categories, loadedAt: Date.now(), partial };
 }
