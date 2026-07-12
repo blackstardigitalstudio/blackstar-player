@@ -115,9 +115,9 @@ function apiBase(c: SourceConfig) {
   )}`;
 }
 
-async function api<T>(c: SourceConfig, action: string, extra = ''): Promise<T> {
+async function api<T>(c: SourceConfig, action: string, extra = '', timeoutMs = 8000): Promise<T> {
   const url = `${apiBase(c)}&action=${action}${extra}`;
-  const { ok, status, text } = await fetchTextTimeout(url);
+  const { ok, status, text } = await fetchTextTimeout(url, timeoutMs);
   if (!ok) throw new Error(`Server Xtream: HTTP ${status}`);
   if (!text) return [] as unknown as T;
   try {
@@ -170,10 +170,13 @@ export function rebuildLiveUrl(c: SourceConfig, streamId: string, ext: string) {
 }
 
 export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<LoadedContent> {
+  // Categories are small but some panels are slow to answer; the default 8s
+  // timeout made them show up "a volte sì a volte no". Give them 20s. (If they
+  // still time out, the folders are rebuilt from the streams below.)
   const [liveCats, vodCats, serCats] = await Promise.all([
-    api<any[]>(c, 'get_live_categories').catch(() => []),
-    api<any[]>(c, 'get_vod_categories').catch(() => []),
-    api<any[]>(c, 'get_series_categories').catch(() => []),
+    api<any[]>(c, 'get_live_categories', '', 20000).catch(() => []),
+    api<any[]>(c, 'get_vod_categories', '', 20000).catch(() => []),
+    api<any[]>(c, 'get_series_categories', '', 20000).catch(() => []),
   ]);
 
   // Some panels return a non-array (an object or an error blob) for an empty

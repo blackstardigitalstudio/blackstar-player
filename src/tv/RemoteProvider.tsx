@@ -181,8 +181,32 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       const wasFocused = focusedRef.current === id;
       nodes.current.delete(id);
       if (wasFocused) {
-        setFocus(null); // clear the (now-gone) ring immediately…
-        scheduleRehome(); // …then re-home once the tree settles
+        // Synchronously hop to the nearest surviving on-screen node so the ring
+        // NEVER blinks out. The old path set focus to null and re-homed on the
+        // NEXT frame — during fast scroll / zapping in a long list the re-home
+        // raced the remount and left you with no cursor ("mi perde la freccia").
+        // Only fall back to the async re-home when nothing measurable survives.
+        const anchor = savedCenterRef.current;
+        const survivors = activeNodes().filter((n) => n.rect) as (Node & { rect: Rect })[];
+        let best: (Node & { rect: Rect }) | null = survivors.length ? survivors[0] : null;
+        if (best && anchor) {
+          let bestD = Infinity;
+          for (const n of survivors) {
+            const c = center(n.rect);
+            const d = (c.x - anchor.x) ** 2 + (c.y - anchor.y) ** 2;
+            if (d < bestD) {
+              bestD = d;
+              best = n;
+            }
+          }
+        }
+        if (best) {
+          savedCenterRef.current = center(best.rect);
+          setFocus(best.id);
+        } else {
+          setFocus(null); // nothing to land on yet…
+          scheduleRehome(); // …re-home once the tree settles
+        }
       }
     },
     [setFocus, scheduleRehome],

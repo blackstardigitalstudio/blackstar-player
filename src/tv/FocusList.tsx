@@ -71,13 +71,16 @@ export const FocusList = forwardRef<FlatList<any>, FlatListProps<any>>(function 
       scrollEventThrottle={props.scrollEventThrottle ?? 16}
       {...props}
       // Forced — never let a caller re-enable clipping (Android default TRUE
-      // unmounts offscreen focusables → lost cursor) and keep a generous window
-      // so the target row is always mounted even in a 2000+ item list during
-      // fast scroll (a small window lets the next row unmount → focus jumps to a
-      // far card). Speed comes from the margin-based animated:false scroll (it
-      // rarely scrolls at all), not from rendering fewer rows.
+      // unmounts offscreen focusables → lost cursor). Keep a window big enough
+      // that the next row in a one-step move is always mounted (measurable), but
+      // no longer the full RN default of 21 screens: on a low-RAM box a 2000+
+      // channel Xtream list with logos mounted ~21 screens deep runs out of
+      // memory and the app is killed ("mi butta fuori"). 11 keeps ~5 screens
+      // each way (plenty for D-pad) and roughly halves the live view count; the
+      // engine's SYNCHRONOUS re-home now keeps the ring alive even if the focused
+      // card is ever virtualized away, so a smaller window can't lose the cursor.
       removeClippedSubviews={false}
-      windowSize={Math.max(21, props.windowSize ?? 21)}
+      windowSize={Math.max(11, props.windowSize ?? 11)}
     />
   );
 });
