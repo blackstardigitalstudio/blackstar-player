@@ -172,7 +172,26 @@ export default function Settings() {
       </Section>
 
       <Section title={t('set.secList')}>
-        <Row icon="refresh" label={t('set.refreshNow')} onPress={() => s.refresh(true)} />
+        <Row
+          icon="refresh"
+          label={t('set.refreshNow')}
+          onPress={async () => {
+            await s.refresh(true);
+            // Give explicit feedback — before, pressing it did the work silently
+            // so there was no sign it had worked.
+            const st = useStore.getState();
+            if (st.error) Alert.alert('Blackstar Player', st.error);
+            else
+              Alert.alert(
+                'Blackstar Player',
+                t('set.refreshDone', {
+                  n: st.content.live.length,
+                  m: st.content.movies.length,
+                  s: st.content.series.length,
+                }),
+              );
+          }}
+        />
         <Row
           icon="time"
           label={t('set.autoUpdate')}
