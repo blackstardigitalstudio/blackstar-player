@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusLayer } from '@/tv/RemoteProvider';
 import { useT } from '@/i18n';
@@ -18,13 +18,18 @@ export function UpdateGate() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Shown while a MANUAL "Cerca aggiornamenti" is checking, so the button gives
+  // immediate visible feedback instead of doing nothing for up to 8 seconds.
+  const [checkingUi, setCheckingUi] = useState(false);
   const checking = useRef(false);
 
   const run = async (manual: boolean) => {
     if (checking.current) return;
     checking.current = true;
+    if (manual) setCheckingUi(true);
     try {
       const u = await checkForUpdate();
+      if (manual) setCheckingUi(false);
       if (u) {
         setError(null);
         setBusy(false);
@@ -38,6 +43,7 @@ export function UpdateGate() {
       if (manual) Alert.alert('Blackstar Player', t('upd.checkFailed'));
     } finally {
       checking.current = false;
+      setCheckingUi(false);
     }
   };
 
@@ -66,6 +72,21 @@ export function UpdateGate() {
       setBusy(false);
     }
   };
+
+  // "Cerca aggiornamenti" is checking → show a spinner overlay so the button
+  // clearly did something (the network check can take a few seconds).
+  if (!info && checkingUi) {
+    return (
+      <Modal visible transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.backdrop}>
+          <View style={[styles.card, { alignItems: 'center', gap: spacing.md }]}>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Txt variant="body">{t('upd.checking')}</Txt>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   if (!info) return null;
   const pct = Math.round(progress * 100);
