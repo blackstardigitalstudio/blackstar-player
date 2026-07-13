@@ -37,22 +37,9 @@ const METHODS = `
     }
   }
 
-  // Forward EVERY key to JS (the app's focus engine is the sole authority) and
-  // CONSUME the D-pad navigation keys so Android's built-in view focus never
-  // moves in parallel. Two competing focus systems made the ring need 2-3
-  // presses to move on a real box; consuming here leaves the engine in charge.
-  // Back / media / digit keys still fall through to the normal flow.
-  override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-    val kc = event.keyCode
-    if (event.action == KeyEvent.ACTION_DOWN) {
-      blackstarEmitKey(kc)
-    }
-    if (kc == KeyEvent.KEYCODE_DPAD_UP || kc == KeyEvent.KEYCODE_DPAD_DOWN ||
-        kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_DPAD_RIGHT ||
-        kc == KeyEvent.KEYCODE_DPAD_CENTER) {
-      return true
-    }
-    return super.dispatchKeyEvent(event)
+  override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+    blackstarEmitKey(keyCode)
+    return super.onKeyDown(keyCode, event)
   }
 `;
 
