@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
@@ -33,6 +33,13 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoFocusHost, setAutoFocusHost] = useState<number>(-1);
+
+  // Refs so pressing "next" on the keyboard jumps to the following field.
+  const nameRef = useRef<TextInput>(null);
+  const m3uRef = useRef<TextInput>(null);
+  const userRef = useRef<TextInput>(null);
+  const passRef = useRef<TextInput>(null);
+  const dnsRef = useRef<TextInput>(null);
 
   // Edit mode: prefill the form from the existing source.
   useEffect(() => {
@@ -139,7 +146,15 @@ export default function Onboarding() {
         </View>
 
         <View style={styles.card}>
-          <Field label={t('ob.profileName')} value={name} onChangeText={setName} placeholder={t('ob.profilePh')} autoCapitalize="sentences" />
+          <Field
+            label={t('ob.profileName')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('ob.profilePh')}
+            autoCapitalize="sentences"
+            inputRef={nameRef}
+            onSubmit={() => (mode === 'm3u' ? m3uRef : userRef).current?.focus()}
+          />
 
           {mode === 'm3u' ? (
             <Field
@@ -148,11 +163,12 @@ export default function Onboarding() {
               onChangeText={setM3uUrl}
               placeholder="http://provider/get.php?...type=m3u_plus"
               keyboardType="url"
+              inputRef={m3uRef}
             />
           ) : (
             <>
-              <Field label={t('ob.username')} value={username} onChangeText={setUsername} placeholder={t('ob.usernamePh')} />
-              <Field label={t('ob.password')} value={password} onChangeText={setPassword} placeholder={t('ob.passwordPh')} secureTextEntry />
+              <Field label={t('ob.username')} value={username} onChangeText={setUsername} placeholder={t('ob.usernamePh')} inputRef={userRef} onSubmit={() => passRef.current?.focus()} />
+              <Field label={t('ob.password')} value={password} onChangeText={setPassword} placeholder={t('ob.passwordPh')} secureTextEntry inputRef={passRef} onSubmit={() => dnsRef.current?.focus()} />
 
               <View style={{ gap: spacing.sm }}>
                 <Txt variant="small">{t('ob.dnsTitle')}</Txt>
@@ -166,6 +182,7 @@ export default function Onboarding() {
                         placeholder="http://dns.server:8080"
                         keyboardType="url"
                         autoFocus={i === autoFocusHost}
+                        inputRef={i === 0 ? dnsRef : undefined}
                       />
                     </View>
                     {i > 0 ? (

@@ -165,6 +165,8 @@ export function Field({
   keyboardType,
   autoCapitalize = 'none',
   autoFocus,
+  inputRef: inputRefProp,
+  onSubmit,
 }: {
   label: string;
   value: string;
@@ -174,10 +176,15 @@ export function Field({
   keyboardType?: 'default' | 'url' | 'email-address';
   autoCapitalize?: 'none' | 'sentences';
   autoFocus?: boolean;
+  /** External ref to this field's input, so the previous field can focus it. */
+  inputRef?: React.RefObject<TextInput | null>;
+  /** Pressing "next" on the keyboard runs this (usually: focus the next field). */
+  onSubmit?: () => void;
 }) {
   const [focused, setFocused] = React.useState(false);
   const [show, setShow] = React.useState(false);
-  const inputRef = React.useRef<TextInput>(null);
+  const localRef = React.useRef<TextInput>(null);
+  const inputRef = inputRefProp ?? localRef;
   // Raise the on-screen keyboard (IME) on OK. The RELIABLE force-show now happens
   // natively (MainActivity.dispatchKeyEvent → InputMethodManager.SHOW_FORCED on the
   // focused EditText), because Android TV suppresses the implicit show that a plain
@@ -186,21 +193,24 @@ export function Field({
   const openKeyboard = () => {
     inputRef.current?.focus();
   };
-  // When the on-screen keyboard opens over a focused field, scroll the field up
-  // so it stays visible above the keyboard (you can see what you type).
+  // Keep the focused field visible ABOVE the on-screen keyboard. Runs both when the
+  // keyboard first opens AND every time this field gains focus — so advancing from
+  // one field to the next (keyboard already open) still scrolls the new field up
+  // (fixes "il campo DNS viene coperto dalla tastiera").
   const scroll = useFocusScroll();
+  const scrollIntoView = React.useCallback(() => {
+    setTimeout(() => {
+      inputRef.current?.measureInWindow((x, y, w, h) => {
+        if (w || h) scroll?.scrollToRect({ x, y, w, h });
+      });
+    }, 140);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scroll]);
   React.useEffect(() => {
     if (!focused) return;
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
-      // small delay so the layout has resized before we measure/scroll
-      setTimeout(() => {
-        inputRef.current?.measureInWindow((x, y, w, h) => {
-          if (w || h) scroll?.scrollToRect({ x, y, w, h });
-        });
-      }, 60);
-    });
+    const sub = Keyboard.addListener('keyboardDidShow', scrollIntoView);
     return () => sub.remove();
-  }, [focused, scroll]);
+  }, [focused, scrollIntoView]);
   return (
     <Focusable
       autoFocus={autoFocus}
@@ -229,16 +239,19 @@ export function Field({
               keyboardType={keyboardType}
               autoCapitalize={autoCapitalize}
               autoCorrect={false}
-              // Enter/Done on the keyboard just CLOSES it; you move between fields
-              // with the D-pad. Dispatching a synthetic 'down' here (old behaviour)
-              // moved the JS engine focus while native EditText focus stayed put —
-              // the two desynced and the cursor bounced back to the first field
-              // ("premo invio, scende e risale / mi riporta a nome").
-              returnKeyType="done"
-              onSubmitEditing={() => inputRef.current?.blur()}
+              // "Next" on the keyboard focuses the NEXT field's native input directly
+              // (onSubmit is wired by onboarding to nextRef.focus()). This moves the
+              // native EditText focus AND — via the next field's onFocus/focusSelf —
+              // the JS engine focus, keeping the two in sync (no more "scende e
+              // risale"). The IME stays open (blurOnSubmit=false) and just re-targets.
+              // The last field uses "done" and closes the keyboard.
+              returnKeyType={onSubmit ? 'next' : 'done'}
+              blurOnSubmit={!onSubmit}
+              onSubmitEditing={() => (onSubmit ? onSubmit() : inputRef.current?.blur())}
               onFocus={() => {
                 setFocused(true);
                 focusSelf();
+                scrollIntoView();
               }}
               onBlur={() => setFocused(false)}
               style={[styles.input, secureTextEntry && { paddingRight: 52 }, active && styles.inputActive]}
