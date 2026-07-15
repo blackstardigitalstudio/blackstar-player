@@ -73,12 +73,11 @@ const METHODS = `
     // Consume the DIRECTIONAL keys so ONLY the JS focus engine moves — Android's
     // native focus search (and list/webview scrolling) can no longer also react to
     // the same press, which was the cause of "devo premere 2-3 volte per muovermi".
-    // We intercept at dispatchKeyEvent (the FIRST hook), so native views can't eat
-    // the key before we see it. Crucially we do NOT consume OK/ENTER (the field
-    // still gets its native OK), and when the on-screen keyboard is open the IME
-    // window receives keys before this Activity — so text entry / cursor keys are
-    // untouched. Arrows fall back to super only if not an ACTION we handle.
-    if (isArrow) return true
+    // BUT: when a text field has focus (onboarding), do NOT consume — let native
+    // focus move together with the engine. Consuming there desynced the JS engine
+    // from the native EditText focus and made the cursor jump back to the first
+    // field while typing credentials. So consume only when NOT editing text.
+    if (isArrow && currentFocus !is EditText) return true
     return super.dispatchKeyEvent(event)
   }
 

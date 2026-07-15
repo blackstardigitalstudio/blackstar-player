@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
-import { useRemote } from '@/tv/RemoteProvider';
 import { useFocusScroll } from '@/tv/FocusScroll';
 import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
 
@@ -179,7 +178,6 @@ export function Field({
   const [focused, setFocused] = React.useState(false);
   const [show, setShow] = React.useState(false);
   const inputRef = React.useRef<TextInput>(null);
-  const { dispatch } = useRemote();
   // Raise the on-screen keyboard (IME) on OK. The RELIABLE force-show now happens
   // natively (MainActivity.dispatchKeyEvent → InputMethodManager.SHOW_FORCED on the
   // focused EditText), because Android TV suppresses the implicit show that a plain
@@ -231,11 +229,13 @@ export function Field({
               keyboardType={keyboardType}
               autoCapitalize={autoCapitalize}
               autoCorrect={false}
-              // Enter on the on-screen keyboard advances to the next field (or the
-              // submit button) — keep the keyboard up so it just hops down.
-              returnKeyType="next"
-              blurOnSubmit={false}
-              onSubmitEditing={() => dispatch('down')}
+              // Enter/Done on the keyboard just CLOSES it; you move between fields
+              // with the D-pad. Dispatching a synthetic 'down' here (old behaviour)
+              // moved the JS engine focus while native EditText focus stayed put —
+              // the two desynced and the cursor bounced back to the first field
+              // ("premo invio, scende e risale / mi riporta a nome").
+              returnKeyType="done"
+              onSubmitEditing={() => inputRef.current?.blur()}
               onFocus={() => {
                 setFocused(true);
                 focusSelf();
