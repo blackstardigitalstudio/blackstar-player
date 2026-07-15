@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Blackstar Player",
+    "name": "Blackstar TV",
     "slug": "blackstar-player",
     "version": "1.0.27",
     "orientation": "default",
@@ -13,7 +13,7 @@
       "icon": "./assets/images/icon.png"
     },
     "android": {
-      "package": "studio.blackstar.player",
+      "package": "studio.blackstar.player.tv",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -66,7 +66,8 @@
       "./plugins/withAndroidTV",
       "expo-localization",
       "react-native-google-cast",
-      "react-native-wireguard-vpn"
+      "react-native-wireguard-vpn",
+      "@react-native-tvos/config-tv"
     ],
     "experiments": {
       "typedRoutes": true,
