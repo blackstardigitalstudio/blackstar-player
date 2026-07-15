@@ -55,6 +55,18 @@ export function Browser({
     const favIds = new Set(favorites.map((f) => f.id));
     return items.filter((i) => favIds.has(i.id));
   }, [favorites, items]);
+  // Recently watched of THIS section (watch order), still present in the list →
+  // "Visti di recente" entry for quick re-access / recommendations.
+  const recents = useStore((s) => s.recents);
+  const recentItems = useMemo(() => {
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const out: MediaItem[] = [];
+    for (const r of recents) {
+      const it = byId.get(r.id);
+      if (it) out.push(it);
+    }
+    return out;
+  }, [recents, items]);
   const [sel, setSel] = useState<string>('all');
   const catScroll = useListScroll();
 
@@ -64,14 +76,23 @@ export function Browser({
   useEffect(() => {
     if (sel === 'fav') {
       if (!favItems.length) setSel('all');
+    } else if (sel === 'recent') {
+      if (!recentItems.length) setSel('all');
     } else if (sel !== 'all' && !cats.some((c) => c.id === sel)) {
       setSel('all');
     }
-  }, [cats, sel, favItems.length]);
+  }, [cats, sel, favItems.length, recentItems.length]);
 
   const filtered = useMemo(
-    () => (sel === 'all' ? items : sel === 'fav' ? favItems : items.filter((i) => i.categoryId === sel)),
-    [items, sel, favItems],
+    () =>
+      sel === 'all'
+        ? items
+        : sel === 'fav'
+          ? favItems
+          : sel === 'recent'
+            ? recentItems
+            : items.filter((i) => i.categoryId === sel),
+    [items, sel, favItems, recentItems],
   );
 
   if (!items.length) {
@@ -80,6 +101,7 @@ export function Browser({
 
   const data = [
     ...(favItems.length ? [{ id: 'fav', name: t('br.favorites') }] : []),
+    ...(recentItems.length ? [{ id: 'recent', name: t('br.recent') }] : []),
     { id: 'all', name: t('common.all') },
     ...cats.map((c) => ({ id: c.id, name: c.name })),
   ];
