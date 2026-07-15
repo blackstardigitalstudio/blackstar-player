@@ -185,13 +185,16 @@ export function Field({
   const [show, setShow] = React.useState(false);
   const localRef = React.useRef<TextInput>(null);
   const inputRef = inputRefProp ?? localRef;
-  // Raise the on-screen keyboard (IME) on OK. The RELIABLE force-show now happens
-  // natively (MainActivity.dispatchKeyEvent → InputMethodManager.SHOW_FORCED on the
-  // focused EditText), because Android TV suppresses the implicit show that a plain
-  // .focus() triggers. So here we only make sure the field holds focus — NO
-  // blur+refocus, which would hide the IME the native side just opened.
+  // Raise the on-screen keyboard (IME) on OK. On a box, pressing OK blurs then
+  // refocuses the field, which reliably forces the IME open even when a plain
+  // .focus() alone wouldn't (Android TV suppresses the implicit show). This is the
+  // KNOWN-GOOD v1.0.19 behaviour — the native side no longer force-shows, so we do
+  // it here.
   const openKeyboard = () => {
-    inputRef.current?.focus();
+    const el = inputRef.current;
+    if (!el) return;
+    el.blur();
+    setTimeout(() => inputRef.current?.focus(), 40);
   };
   // Keep the focused field visible ABOVE the on-screen keyboard. Runs both when the
   // keyboard first opens AND every time this field gains focus — so advancing from

@@ -4,13 +4,19 @@
  *
  * Works on plain Android boxes — no react-native-tvos fork required. The whole
  * emit path is wrapped in try/catch so it degrades gracefully (touch still works)
- * and can never break the build. Made in Italy.
+ * and can never break the build.
+ *
+ * IMPORTANT — this is the KNOWN-GOOD baseline (v1.0.19): emit the key AND call
+ * super.onKeyDown so Android's native focus + on-screen keyboard (IME) keep
+ * working normally. Earlier attempts to also CONSUME the arrows / intercept in
+ * dispatchKeyEvent (to fix "2-3 pressioni") fought the native focus system and
+ * broke text-field navigation with the keyboard (cursor bounced back to the first
+ * field, DNS field covered). On a box, text input MUST be left to native focus +
+ * IME — do not intercept keys here. Made in Italy.
  */
 const { withMainActivity } = require('@expo/config-plugins');
 
 const IMPORTS = `import android.view.KeyEvent
-import android.widget.EditText
-import android.view.inputmethod.InputMethodManager
 import com.facebook.react.ReactApplication
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
@@ -39,79 +45,9 @@ const METHODS = `
     }
   }
 
-  private fun blackstarForceKeyboard() {
-    // On Android TV / boxes the IMPLICIT soft-keyboard show that React Native's
-    // .focus() triggers is SUPPRESSED by the system (leanback / non-touch), so the
-    // on-screen keyboard often never appears with a remote. When OK is pressed on a
-    // focused text field, force the IME open — this is the reliable way to raise the
-    // keyboard. Additive only: arrow/navigation handling is untouched, so this can
-    // never regress the D-pad (unlike consuming keys).
-    try {
-      val v = currentFocus
-      if (v is EditText) {
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(v, InputMethodManager.SHOW_FORCED)
-      }
-    } catch (e: Throwable) {
-    }
-  }
-
-  override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-    val kc = event.keyCode
-    val isArrow = kc == KeyEvent.KEYCODE_DPAD_UP ||
-      kc == KeyEvent.KEYCODE_DPAD_DOWN ||
-      kc == KeyEvent.KEYCODE_DPAD_LEFT ||
-      kc == KeyEvent.KEYCODE_DPAD_RIGHT
-    if (event.action == KeyEvent.ACTION_DOWN) {
-      blackstarEmitKey(kc)
-      if (kc == KeyEvent.KEYCODE_DPAD_CENTER ||
-          kc == KeyEvent.KEYCODE_ENTER ||
-          kc == KeyEvent.KEYCODE_NUMPAD_ENTER) {
-        blackstarForceKeyboard()
-      }
-    }
-    // Consume the DIRECTIONAL keys so ONLY the JS focus engine moves — Android's
-    // native focus search (and list/webview scrolling) can no longer also react to
-    // the same press, which was the cause of "devo premere 2-3 volte per muovermi".
-    // BUT: when a text field has focus (onboarding), do NOT consume — let native
-    // focus move together with the engine. Consuming there desynced the JS engine
-    // from the native EditText focus and made the cursor jump back to the first
-    // field while typing credentials. So consume only when NOT editing text.
-    if (isArrow && currentFocus !is EditText) return true
-    return super.dispatchKeyEvent(event)
-  }
-
-  private fun blackstarEmitLongOk() {
-    try {
-      val ctx = blackstarReactContext() ?: return
-      ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-        .emit("BlackstarRemoteLongOk", null)
-    } catch (e: Throwable) {
-    }
-  }
-
-  // Enable long-press detection for OK, then emit a distinct "long OK" event when
-  // it fires. The normal short 'select' still fires on the initial key-down (in
-  // dispatchKeyEvent), so this is purely additive — used to PIN a category by
-  // holding OK on it.
   override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-    if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-         keyCode == KeyEvent.KEYCODE_ENTER ||
-         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) &&
-        event != null && event.repeatCount == 0) {
-      event.startTracking()
-    }
+    blackstarEmitKey(keyCode)
     return super.onKeyDown(keyCode, event)
-  }
-
-  override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
-    if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-        keyCode == KeyEvent.KEYCODE_ENTER ||
-        keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
-      blackstarEmitLongOk()
-      return true
-    }
-    return super.onKeyLongPress(keyCode, event)
   }
 `;
 
