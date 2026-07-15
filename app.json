@@ -62,7 +62,6 @@
           }
         }
       ],
-      "./plugins/withTVRemote",
       "./plugins/withAndroidTV",
       "expo-localization",
       "react-native-google-cast",
