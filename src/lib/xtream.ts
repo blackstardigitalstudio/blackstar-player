@@ -133,14 +133,28 @@ export async function xtreamLogin(c: SourceConfig): Promise<{ name: string; expD
   const url = `${host}/player_api.php?username=${encodeURIComponent(c.username || '')}&password=${encodeURIComponent(
     c.password || '',
   )}`;
-  const { ok, status, text } = await fetchTextTimeout(url);
+  // First connection to a cold DNS / panel under load can legitimately take
+  // 10-12s; the old 8s timeout rejected working credentials as "non validi".
+  const { ok, status, text } = await fetchTextTimeout(url, 15000);
   if (!ok) throw new Error(`Connessione fallita (HTTP ${status}). Controlla il DNS server.`);
   let data: any = null;
+  let parseFailed = false;
   try {
     data = JSON.parse(text);
-  } catch {}
-  const auth = data?.user_info?.auth;
-  if (!data || auth === 0 || auth === '0') {
+  } catch {
+    parseFailed = true;
+  }
+  // A 200 with HTML (Cloudflare / captcha / redirect page) is NOT a wrong
+  // password — say so, or the user changes credentials pointlessly.
+  if (parseFailed) {
+    throw new Error('Risposta non valida dal server (possibile blocco/redirect). Verifica DNS, porta o prova in HTTPS.');
+  }
+  const ui = data?.user_info;
+  // Some panels report auth as boolean false (not 0). Fail on any explicit
+  // negative, or when user_info is missing entirely.
+  const auth = ui?.auth;
+  const authFailed = auth === 0 || auth === '0' || auth === false;
+  if (!data || !ui || authFailed) {
     throw new Error('Username o password non validi.');
   }
   return {
@@ -170,13 +184,23 @@ export function rebuildLiveUrl(c: SourceConfig, streamId: string, ext: string) {
 }
 
 export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<LoadedContent> {
-  // Categories are small but some panels are slow to answer; the default 8s
-  // timeout made them show up "a volte sì a volte no". Give them 20s. (If they
-  // still time out, the folders are rebuilt from the streams below.)
+  // Track REAL failures (timeout/HTTP) separately from genuinely-empty sections.
+  // A failed categories call must NOT be cached as "no categories" for hours — it
+  // marks the load partial so the short TTL forces a retry. This is the fix for
+  // "categorie a volte sì a volte no".
+  let partial = false;
+  const catCall = async (action: string) => {
+    try {
+      return await api<any[]>(c, action, '', 20000);
+    } catch {
+      partial = true;
+      return [] as any[];
+    }
+  };
   const [liveCats, vodCats, serCats] = await Promise.all([
-    api<any[]>(c, 'get_live_categories', '', 20000).catch(() => []),
-    api<any[]>(c, 'get_vod_categories', '', 20000).catch(() => []),
-    api<any[]>(c, 'get_series_categories', '', 20000).catch(() => []),
+    catCall('get_live_categories'),
+    catCall('get_vod_categories'),
+    catCall('get_series_categories'),
   ]);
 
   // Some panels return a non-array (an object or an error blob) for an empty
@@ -193,12 +217,12 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
   const catMap = new Map(categories.map((c2) => [c2.id, c2.name]));
   const catName = (kind: string, id: any) => (id != null ? catMap.get(`${kind}:${id}`) : undefined);
 
-  // Track real failures separately from empty results so a partial outage (Live
-  // up, VOD/Series down) is not cached as a complete catalog for hours.
-  let partial = false;
+  // Streams are the BIG payload (tens of thousands of rows / many MB on real
+  // panels). The default 8s timeout made a slow box authenticate but come back
+  // with an empty catalog ("entra ma non carica la lista"). Give them 45s.
   const call = async (action: string) => {
     try {
-      return await api<any[]>(c, action);
+      return await api<any[]>(c, action, '', 45000);
     } catch {
       partial = true;
       return [] as any[];

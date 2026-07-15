@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusList, useListScroll } from '@/tv/FocusList';
@@ -12,9 +12,9 @@ import { Empty, Txt } from './ui';
 
 const CAT_ROW = 46;
 
-function Chip({ label, active, onPress, onFocus }: { label: string; active: boolean; onPress: () => void; onFocus?: () => void }) {
+function Chip({ label, active, onPress, onFocus, autoFocus }: { label: string; active: boolean; onPress: () => void; onFocus?: () => void; autoFocus?: boolean }) {
   return (
-    <Focusable onSelect={onPress} onFocus={onFocus} style={[styles.catRow, active && styles.active]} focusStyle={styles.focus}>
+    <Focusable onSelect={onPress} onFocus={onFocus} autoFocus={autoFocus} style={[styles.catRow, active && styles.active]} focusStyle={styles.focus}>
       {(f) => (
         <Txt variant="small" numberOfLines={1} color={active || f ? colors.text : colors.textMuted}>
           {label}
@@ -50,6 +50,13 @@ export function Browser({
   const [sel, setSel] = useState<string>('all');
   const catScroll = useListScroll();
 
+  // If the list refreshes (partial→full renumbers ids, or the source changes) and
+  // the selected category disappears, fall back to "all" so the grid never ends
+  // up mysteriously empty while channels actually exist.
+  useEffect(() => {
+    if (sel !== 'all' && !cats.some((c) => c.id === sel)) setSel('all');
+  }, [cats, sel]);
+
   const filtered = useMemo(
     () => (sel === 'all' ? items : items.filter((i) => i.categoryId === sel)),
     [items, sel],
@@ -78,7 +85,9 @@ export function Browser({
           getItemLayout={(_: any, index: number) => ({ length: CAT_ROW, offset: CAT_ROW * index, index })}
           onScrollToIndexFailed={() => {}}
           renderItem={({ item, index }: any) => (
-            <Chip label={item.name} active={sel === item.id} onPress={() => setSel(item.id)} onFocus={() => catScroll.reveal(CAT_ROW * index, CAT_ROW)} />
+            // Auto-focus the first category when the screen opens so the D-pad lands
+            // INSIDE the content instead of staying stuck on the side menu.
+            <Chip label={item.name} active={sel === item.id} autoFocus={index === 0} onPress={() => setSel(item.id)} onFocus={() => catScroll.reveal(CAT_ROW * index, CAT_ROW)} />
           )}
         />
       </View>

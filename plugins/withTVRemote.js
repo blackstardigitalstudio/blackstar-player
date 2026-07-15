@@ -9,6 +9,8 @@
 const { withMainActivity } = require('@expo/config-plugins');
 
 const IMPORTS = `import android.view.KeyEvent
+import android.widget.EditText
+import android.view.inputmethod.InputMethodManager
 import com.facebook.react.ReactApplication
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
@@ -37,9 +39,47 @@ const METHODS = `
     }
   }
 
-  override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-    blackstarEmitKey(keyCode)
-    return super.onKeyDown(keyCode, event)
+  private fun blackstarForceKeyboard() {
+    // On Android TV / boxes the IMPLICIT soft-keyboard show that React Native's
+    // .focus() triggers is SUPPRESSED by the system (leanback / non-touch), so the
+    // on-screen keyboard often never appears with a remote. When OK is pressed on a
+    // focused text field, force the IME open — this is the reliable way to raise the
+    // keyboard. Additive only: arrow/navigation handling is untouched, so this can
+    // never regress the D-pad (unlike consuming keys).
+    try {
+      val v = currentFocus
+      if (v is EditText) {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(v, InputMethodManager.SHOW_FORCED)
+      }
+    } catch (e: Throwable) {
+    }
+  }
+
+  override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+    val kc = event.keyCode
+    val isArrow = kc == KeyEvent.KEYCODE_DPAD_UP ||
+      kc == KeyEvent.KEYCODE_DPAD_DOWN ||
+      kc == KeyEvent.KEYCODE_DPAD_LEFT ||
+      kc == KeyEvent.KEYCODE_DPAD_RIGHT
+    if (event.action == KeyEvent.ACTION_DOWN) {
+      blackstarEmitKey(kc)
+      if (kc == KeyEvent.KEYCODE_DPAD_CENTER ||
+          kc == KeyEvent.KEYCODE_ENTER ||
+          kc == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+        blackstarForceKeyboard()
+      }
+    }
+    // Consume the DIRECTIONAL keys so ONLY the JS focus engine moves — Android's
+    // native focus search (and list/webview scrolling) can no longer also react to
+    // the same press, which was the cause of "devo premere 2-3 volte per muovermi".
+    // We intercept at dispatchKeyEvent (the FIRST hook), so native views can't eat
+    // the key before we see it. Crucially we do NOT consume OK/ENTER (the field
+    // still gets its native OK), and when the on-screen keyboard is open the IME
+    // window receives keys before this Activity — so text entry / cursor keys are
+    // untouched. Arrows fall back to super only if not an ACTION we handle.
+    if (isArrow) return true
+    return super.dispatchKeyEvent(event)
   }
 `;
 

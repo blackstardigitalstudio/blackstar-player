@@ -180,15 +180,13 @@ export function Field({
   const [show, setShow] = React.useState(false);
   const inputRef = React.useRef<TextInput>(null);
   const { dispatch } = useRemote();
-  // Reliably raise the on-screen keyboard (IME) on the box — pressing OK blurs
-  // then refocuses, which forces the IME open even when programmatic focus alone
-  // wouldn't. Once the IME is up, a phone (Google TV / Android TV Remote app) or a
-  // Bluetooth keyboard can type into it.
+  // Raise the on-screen keyboard (IME) on OK. The RELIABLE force-show now happens
+  // natively (MainActivity.dispatchKeyEvent → InputMethodManager.SHOW_FORCED on the
+  // focused EditText), because Android TV suppresses the implicit show that a plain
+  // .focus() triggers. So here we only make sure the field holds focus — NO
+  // blur+refocus, which would hide the IME the native side just opened.
   const openKeyboard = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.blur();
-    setTimeout(() => inputRef.current?.focus(), 40);
+    inputRef.current?.focus();
   };
   // When the on-screen keyboard opens over a focused field, scroll the field up
   // so it stays visible above the keyboard (you can see what you type).

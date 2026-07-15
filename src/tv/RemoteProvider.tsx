@@ -138,10 +138,21 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
 
   // Re-home focus onto the spatially nearest surviving node in the active layer
   // (using cached rects — synchronous), instead of dropping to null / node #0.
+  const rehomeRef = useRef<() => void>(() => {});
+  const rehomeRetries = useRef(0);
   const rehome = useCallback(() => {
-    if (focusedRef.current) return;
+    if (focusedRef.current) {
+      rehomeRetries.current = 0;
+      return;
+    }
     const list = activeNodes();
-    if (!list.length) return;
+    if (!list.length) {
+      // Content not mounted yet (still loading after a modal close or category
+      // swap). Retry for a few frames instead of leaving the ring gone.
+      if (rehomeRetries.current++ < 20) raf(() => rehomeRef.current());
+      return;
+    }
+    rehomeRetries.current = 0;
     const withRect = list.filter((n) => n.rect) as (Node & { rect: Rect })[];
     if (!withRect.length) {
       setFocus(list[0].id);
@@ -165,6 +176,7 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     }
     setFocus(best.id);
   }, [setFocus]);
+  rehomeRef.current = rehome;
 
   const rehomeScheduled = useRef(false);
   const scheduleRehome = useCallback(() => {
@@ -237,9 +249,20 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       const restore = savedFocusRef.current[layer];
       delete savedFocusRef.current[layer];
       const n = restore ? nodes.current.get(restore) : undefined;
-      setFocus(n && n.layer === activeLayer() ? restore! : null);
+      if (n && n.layer === activeLayer()) {
+        setFocus(restore!);
+      } else {
+        // The node we were on is gone (unmounted / re-keyed while the modal was
+        // open — very common). The old code dropped focus to null with NO
+        // recovery: the ring vanished and the next press was wasted re-selecting
+        // it ("perdo il quadratino" + "2-3 pressioni"). Re-home onto the nearest
+        // surviving node instead.
+        setFocus(null);
+        rehome();
+        if (!focusedRef.current) scheduleRehome();
+      }
     },
-    [setFocus],
+    [setFocus, rehome, scheduleRehome],
   );
 
   // Background: keep cached rects fresh after a move (scroll settles, new rows

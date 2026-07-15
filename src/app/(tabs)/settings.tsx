@@ -19,15 +19,17 @@ function Row({
   value,
   danger,
   onPress,
+  autoFocus,
 }: {
   icon: any;
   label: string;
   value?: string;
   danger?: boolean;
   onPress: () => void;
+  autoFocus?: boolean;
 }) {
   return (
-    <Focusable onSelect={onPress} style={styles.row} focusStyle={styles.rowFocus}>
+    <Focusable onSelect={onPress} autoFocus={autoFocus} style={styles.row} focusStyle={styles.rowFocus}>
       {(f) => (
         <View style={styles.rowInner}>
           <Ionicons name={icon} size={20} color={danger ? colors.danger : f ? colors.accent : colors.textMuted} />
@@ -135,6 +137,7 @@ export default function Settings() {
           label={t('set.switchProfile')}
           value={s.profiles.find((p) => p.id === s.activeProfileId)?.name}
           onPress={() => router.push('/profiles')}
+          autoFocus
         />
         {s.profiles.length > 1 && s.activeProfileId ? (
           <Row
