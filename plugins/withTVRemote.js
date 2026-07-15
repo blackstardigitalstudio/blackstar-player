@@ -81,6 +81,39 @@ const METHODS = `
     if (isArrow) return true
     return super.dispatchKeyEvent(event)
   }
+
+  private fun blackstarEmitLongOk() {
+    try {
+      val ctx = blackstarReactContext() ?: return
+      ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("BlackstarRemoteLongOk", null)
+    } catch (e: Throwable) {
+    }
+  }
+
+  // Enable long-press detection for OK, then emit a distinct "long OK" event when
+  // it fires. The normal short 'select' still fires on the initial key-down (in
+  // dispatchKeyEvent), so this is purely additive — used to PIN a category by
+  // holding OK on it.
+  override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+    if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+         keyCode == KeyEvent.KEYCODE_ENTER ||
+         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) &&
+        event != null && event.repeatCount == 0) {
+      event.startTracking()
+    }
+    return super.onKeyDown(keyCode, event)
+  }
+
+  override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
+    if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == KeyEvent.KEYCODE_ENTER ||
+        keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+      blackstarEmitLongOk()
+      return true
+    }
+    return super.onKeyLongPress(keyCode, event)
+  }
 `;
 
 module.exports = function withTVRemote(config) {

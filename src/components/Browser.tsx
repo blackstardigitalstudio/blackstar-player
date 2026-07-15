@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
@@ -12,13 +13,32 @@ import { Empty, Txt } from './ui';
 
 const CAT_ROW = 46;
 
-function Chip({ label, active, onPress, onFocus, autoFocus }: { label: string; active: boolean; onPress: () => void; onFocus?: () => void; autoFocus?: boolean }) {
+function Chip({
+  label,
+  active,
+  pinned,
+  onPress,
+  onLongSelect,
+  onFocus,
+  autoFocus,
+}: {
+  label: string;
+  active: boolean;
+  pinned?: boolean;
+  onPress: () => void;
+  onLongSelect?: () => void;
+  onFocus?: () => void;
+  autoFocus?: boolean;
+}) {
   return (
-    <Focusable onSelect={onPress} onFocus={onFocus} autoFocus={autoFocus} style={[styles.catRow, active && styles.active]} focusStyle={styles.focus}>
+    <Focusable onSelect={onPress} onLongSelect={onLongSelect} onFocus={onFocus} autoFocus={autoFocus} style={[styles.catRow, active && styles.active]} focusStyle={styles.focus}>
       {(f) => (
-        <Txt variant="small" numberOfLines={1} color={active || f ? colors.text : colors.textMuted}>
-          {label}
-        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {pinned ? <Ionicons name="star" size={13} color={colors.accent} /> : null}
+          <Txt variant="small" numberOfLines={1} color={active || f ? colors.text : colors.textMuted} style={{ flex: 1 }}>
+            {label}
+          </Txt>
+        </View>
       )}
     </Focusable>
   );
@@ -42,10 +62,12 @@ export function Browser({
   const t = useT();
   const order = useStore((s) => s.settings.categoryOrder);
   const manual = useStore((s) => s.settings.categoryManual);
+  const pins = useStore((s) => s.settings.categoryPins);
+  const togglePin = useStore((s) => s.toggleCategoryPin);
   const taste = useStore((s) => s.taste);
   const cats = useMemo(
-    () => sortCategories(categories.filter((c) => c.kind === kind), order, taste, manual),
-    [categories, kind, order, taste, manual],
+    () => sortCategories(categories.filter((c) => c.kind === kind), order, taste, manual, pins),
+    [categories, kind, order, taste, manual, pins],
   );
   // Favourites of THIS section (live channels, films, series) get their own entry
   // at the TOP of the category column. Intersect with the current list so we never
@@ -122,11 +144,23 @@ export function Browser({
           onLayout={catScroll.onLayout}
           getItemLayout={(_: any, index: number) => ({ length: CAT_ROW, offset: CAT_ROW * index, index })}
           onScrollToIndexFailed={() => {}}
-          renderItem={({ item, index }: any) => (
-            // Auto-focus the first category when the screen opens so the D-pad lands
-            // INSIDE the content instead of staying stuck on the side menu.
-            <Chip label={item.name} active={sel === item.id} autoFocus={index === 0} onPress={() => setSel(item.id)} onFocus={() => catScroll.reveal(CAT_ROW * index, CAT_ROW)} />
-          )}
+          renderItem={({ item, index }: any) => {
+            // Real categories can be PINNED by holding OK (star + float to top).
+            const special = item.id === 'all' || item.id === 'fav' || item.id === 'recent';
+            return (
+              // Auto-focus the first category when the screen opens so the D-pad lands
+              // INSIDE the content instead of staying stuck on the side menu.
+              <Chip
+                label={item.name}
+                active={sel === item.id}
+                pinned={!special && pins.includes(item.id)}
+                autoFocus={index === 0}
+                onPress={() => setSel(item.id)}
+                onLongSelect={special ? undefined : () => togglePin(item.id)}
+                onFocus={() => catScroll.reveal(CAT_ROW * index, CAT_ROW)}
+              />
+            );
+          }}
         />
       </View>
       <View style={{ flex: 1 }}>

@@ -20,6 +20,8 @@ interface Node {
   id: string;
   measure: () => Promise<Rect | null>;
   onSelect?: () => void;
+  /** Fired when OK is HELD (long-press) on this node — used to pin a category. */
+  onLongSelect?: () => void;
   /** Focus layer this node lives in. Only nodes in the active (top) layer are reachable. */
   layer: number;
   /** Prefer this node when its layer activates (e.g. a modal's primary button). */
@@ -387,6 +389,13 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
       const k = androidKeyToRemote(e?.keyCode);
       if (k) dispatch(k);
     });
+    // OK held down (native onKeyLongPress) → toggle the focused node's long action
+    // (e.g. pin a category). The normal short 'select' still fires on the initial
+    // key-down, so this is purely additive.
+    const subLong = DeviceEventEmitter.addListener('BlackstarRemoteLongOk', () => {
+      const id = focusedRef.current;
+      if (id) nodes.current.get(id)?.onLongSelect?.();
+    });
     let webHandler: ((e: KeyboardEvent) => void) | null = null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       webHandler = (e: KeyboardEvent) => {
@@ -400,6 +409,7 @@ export function RemoteProvider({ children }: { children: React.ReactNode }) {
     }
     return () => {
       sub.remove();
+      subLong.remove();
       if (webHandler && typeof window !== 'undefined') window.removeEventListener('keydown', webHandler);
     };
   }, [dispatch]);

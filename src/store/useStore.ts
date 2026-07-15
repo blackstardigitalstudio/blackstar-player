@@ -31,6 +31,8 @@ export interface Settings {
   pin: string;
   categoryOrder: 'default' | 'alpha' | 'mostWatched' | 'manual';
   categoryManual: string[];
+  /** Pinned category ids — always sorted to the TOP of the category list. */
+  categoryPins: string[];
 }
 
 function deviceLang(): Lang {
@@ -56,6 +58,7 @@ const DEFAULT_SETTINGS: Settings = {
   pin: '',
   categoryOrder: 'default',
   categoryManual: [],
+  categoryPins: [],
 };
 
 export const PROFILE_COLORS = ['#A855F7', '#22D3EE', '#34D399', '#FBBF24', '#FB7185', '#60A5FA'];
@@ -101,6 +104,7 @@ interface State {
   clearRecents: () => Promise<void>;
   clearCache: () => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
+  toggleCategoryPin: (id: string) => Promise<void>;
   saveProgress: (entry: Omit<ProgressEntry, 'updatedAt'>) => Promise<void>;
   getProgress: (key: string) => ProgressEntry | undefined;
   continueWatching: () => ProgressEntry[];
@@ -327,6 +331,14 @@ export const useStore = create<State>((set, get) => ({
 
   updateSettings: async (patch) => {
     const settings = { ...get().settings, ...patch };
+    set({ settings });
+    await setJSON(KEYS.settings, settings);
+  },
+
+  toggleCategoryPin: async (id) => {
+    const cur = get().settings.categoryPins || [];
+    const categoryPins = cur.includes(id) ? cur.filter((x) => x !== id) : [id, ...cur];
+    const settings = { ...get().settings, categoryPins };
     set({ settings });
     await setJSON(KEYS.settings, settings);
   },

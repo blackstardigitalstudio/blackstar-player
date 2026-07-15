@@ -8,6 +8,7 @@ let counter = 0;
 
 interface Props {
   onSelect?: () => void;
+  onLongSelect?: () => void;
   onFocus?: () => void;
   style?: StyleProp<ViewStyle>;
   focusStyle?: StyleProp<ViewStyle>;
@@ -21,6 +22,7 @@ interface Props {
 
 export function Focusable({
   onSelect,
+  onLongSelect,
   onFocus,
   style,
   focusStyle,
@@ -42,6 +44,8 @@ export function Focusable({
   // and could drop focus notifications → stuck rings).
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onLongSelectRef = useRef(onLongSelect);
+  onLongSelectRef.current = onLongSelect;
   const onFocusRef = useRef(onFocus);
   onFocusRef.current = onFocus;
 
@@ -84,7 +88,7 @@ export function Focusable({
       unregister(id);
       return;
     }
-    register({ id, measure, layer, autoFocus, onSelect: () => onSelectRef.current?.() });
+    register({ id, measure, layer, autoFocus, onSelect: () => onSelectRef.current?.(), onLongSelect: () => onLongSelectRef.current?.() });
     return () => unregister(id);
   }, [register, unregister, id, measure, disabled, layer, autoFocus]);
 
