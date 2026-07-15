@@ -3,7 +3,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
@@ -82,6 +82,10 @@ export default function Player() {
   const attempt = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didSeek = useRef(false);
+  // Position captured when the app goes to the background, re-applied on return
+  // (VOD only). Lets us release the stream in background and resume in place.
+  const bgPosRef = useRef(0);
+  const pendingSeekRef = useRef<number | null>(null);
 
   const player = useVideoPlayer(cur.candidates[0] ? buildSource(cur.candidates[0]) : null, (p) => {
     p.play();
@@ -145,7 +149,17 @@ export default function Player() {
       if (status === 'readyToPlay') {
         setBuffering(false);
         setError(null);
-        if (!didSeek.current && resumeAt > 2) {
+        // A pending seek from a background→foreground reconnect wins; otherwise
+        // apply the initial "Continua a guardare" resume once.
+        const bgSeek = pendingSeekRef.current;
+        if (bgSeek != null) {
+          pendingSeekRef.current = null;
+          if (!cur.isLive && bgSeek > 2) {
+            try {
+              player.currentTime = bgSeek;
+            } catch {}
+          }
+        } else if (!didSeek.current && resumeAt > 2) {
           try {
             player.currentTime = resumeAt;
           } catch {}
@@ -199,6 +213,37 @@ export default function Player() {
       save();
     };
   }, [player, progressCtx, saveProgress]);
+
+  // Background handling — the fix for the "multivision / max connessioni" cut.
+  // IPTV subscriptions usually allow ONE simultaneous connection. If the stream
+  // stays open while the app is in the background (Home on the remote, standby),
+  // the panel sees a second connection when you come back and cuts the feed. So we
+  // RELEASE the stream when the app leaves the foreground and reconnect cleanly on
+  // return, resuming a film exactly where it was.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        const url = cur.candidates[attempt.current] || cur.candidates[0];
+        if (!url) return;
+        setBuffering(true);
+        try {
+          player.replace(buildSource(url));
+          player.play();
+        } catch {}
+      } else {
+        // 'background' / 'inactive' → tear down the connection.
+        try {
+          if (!cur.isLive) {
+            bgPosRef.current = player.currentTime ?? 0;
+            pendingSeekRef.current = bgPosRef.current;
+          }
+          player.pause();
+          player.replace(null);
+        } catch {}
+      }
+    });
+    return () => sub.remove();
+  }, [player, cur.candidates, cur.isLive]);
 
   const showOverlay = useCallback(() => {
     setOverlay(true);
