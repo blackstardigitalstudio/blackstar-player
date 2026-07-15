@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useRef } from 'react';
-import { useTVEventHandler } from 'react-native';
+import { TVFocusGuideView, useTVEventHandler } from 'react-native';
 import type { RemoteKey } from './keys';
 
 // TV-NATIVE build (react-native-tvos): there is NO custom focus engine — Android TV's
@@ -69,7 +69,15 @@ export function useFocusLayer() {
   return 0;
 }
 
-/** Modals trap focus natively on TV — just render the content. */
+/**
+ * Modal focus trap. On TV the D-pad would otherwise wander OUT of a modal onto the
+ * screen behind it. TVFocusGuideView with trapFocus in every direction keeps focus
+ * inside; autoFocus lands on (and remembers) a focusable child.
+ */
 export function FocusLayer({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <TVFocusGuideView autoFocus trapFocusLeft trapFocusRight trapFocusUp trapFocusDown>
+      {children}
+    </TVFocusGuideView>
+  );
 }

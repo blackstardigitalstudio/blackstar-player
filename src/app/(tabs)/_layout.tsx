@@ -1,6 +1,6 @@
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { BackHandler, View } from 'react-native';
+import { BackHandler, TVFocusGuideView, View } from 'react-native';
 import { NavRail } from '@/components/NavRail';
 import { colors } from '@/theme/tokens';
 
@@ -27,9 +27,11 @@ export default function TabsLayout() {
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }}>
       <NavRail />
-      <View style={{ flex: 1 }}>
+      {/* autoFocus: pressing RIGHT from the side menu lands the D-pad on a REAL
+          element in the content (and remembers where you were). */}
+      <TVFocusGuideView autoFocus style={{ flex: 1 }}>
         <Slot />
-      </View>
+      </TVFocusGuideView>
     </View>
   );
 }

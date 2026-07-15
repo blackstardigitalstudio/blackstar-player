@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TVFocusGuideView, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusList, useListScroll } from '@/tv/FocusList';
 import { useT } from '@/i18n';
@@ -163,9 +163,11 @@ export function Browser({
           }}
         />
       </View>
-      <View style={{ flex: 1 }}>
+      {/* autoFocus: RIGHT from the category column lands on a real card in the grid
+          (and returns to the last card). */}
+      <TVFocusGuideView autoFocus style={{ flex: 1 }}>
         <MediaGrid items={filtered} onSelect={onSelect} variant={variant} />
-      </View>
+      </TVFocusGuideView>
     </View>
   );
 }
