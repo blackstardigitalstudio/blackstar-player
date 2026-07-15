@@ -76,6 +76,7 @@ const it: Dict = {
 
   'br.empty': 'Nessun contenuto in {title}',
   'br.emptyHint': 'Aggiorna la lista o cambia profilo dalle Impostazioni.',
+  'br.favorites': 'Preferiti',
 
   'title.live': 'Live TV',
   'title.movies': 'Film',
@@ -296,6 +297,7 @@ const es: Dict = {
 
   'br.empty': 'No hay contenido en {title}',
   'br.emptyHint': 'Actualiza la lista o cambia de perfil en Ajustes.',
+  'br.favorites': 'Favoritos',
 
   'title.live': 'TV en vivo',
   'title.movies': 'Películas',

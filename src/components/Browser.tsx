@@ -47,6 +47,14 @@ export function Browser({
     () => sortCategories(categories.filter((c) => c.kind === kind), order, taste, manual),
     [categories, kind, order, taste, manual],
   );
+  // Favourites of THIS section (live channels, films, series) get their own entry
+  // at the TOP of the category column. Intersect with the current list so we never
+  // show a stale favourite that no longer exists in the source.
+  const favorites = useStore((s) => s.favorites);
+  const favItems = useMemo(() => {
+    const favIds = new Set(favorites.map((f) => f.id));
+    return items.filter((i) => favIds.has(i.id));
+  }, [favorites, items]);
   const [sel, setSel] = useState<string>('all');
   const catScroll = useListScroll();
 
@@ -54,19 +62,27 @@ export function Browser({
   // the selected category disappears, fall back to "all" so the grid never ends
   // up mysteriously empty while channels actually exist.
   useEffect(() => {
-    if (sel !== 'all' && !cats.some((c) => c.id === sel)) setSel('all');
-  }, [cats, sel]);
+    if (sel === 'fav') {
+      if (!favItems.length) setSel('all');
+    } else if (sel !== 'all' && !cats.some((c) => c.id === sel)) {
+      setSel('all');
+    }
+  }, [cats, sel, favItems.length]);
 
   const filtered = useMemo(
-    () => (sel === 'all' ? items : items.filter((i) => i.categoryId === sel)),
-    [items, sel],
+    () => (sel === 'all' ? items : sel === 'fav' ? favItems : items.filter((i) => i.categoryId === sel)),
+    [items, sel, favItems],
   );
 
   if (!items.length) {
     return <Empty title={t('br.empty', { title })} hint={t('br.emptyHint')} />;
   }
 
-  const data = [{ id: 'all', name: t('common.all') }, ...cats.map((c) => ({ id: c.id, name: c.name }))];
+  const data = [
+    ...(favItems.length ? [{ id: 'fav', name: t('br.favorites') }] : []),
+    { id: 'all', name: t('common.all') },
+    ...cats.map((c) => ({ id: c.id, name: c.name })),
+  ];
 
   // Subcategories in a fixed LEFT column + content grid on the right (10-foot).
   return (
