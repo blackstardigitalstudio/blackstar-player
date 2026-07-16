@@ -6,19 +6,17 @@
  * emit path is wrapped in try/catch so it degrades gracefully (touch still works)
  * and can never break the build.
  *
- * APPROACH (v1.0.28): dispatchKeyEvent with a TEXT-FIELD gate.
- *  - Browsing (no EditText focused): emit the arrow to the JS engine AND consume it
- *    (return true) so ONLY the JS ring moves → the selection is one clear element
- *    (no native/JS double-focus, no "non si vede quale si seleziona").
- *  - Editing (an EditText holds native focus): do NOT emit arrows to the engine and
- *    do NOT consume them → the native Android focus + on-screen keyboard (IME)
- *    handle the fields, which is the only thing that works for text input on a box.
- * OK/back/media/digits are always emitted and never consumed. Made in Italy.
+ * IMPORTANT — this is the KNOWN-GOOD baseline (v1.0.19): emit the key AND call
+ * super.onKeyDown so Android's native focus + on-screen keyboard (IME) keep
+ * working normally. Earlier attempts to also CONSUME the arrows / intercept in
+ * dispatchKeyEvent (to fix "2-3 pressioni") fought the native focus system and
+ * broke text-field navigation with the keyboard (cursor bounced back to the first
+ * field, DNS field covered). On a box, text input MUST be left to native focus +
+ * IME — do not intercept keys here. Made in Italy.
  */
 const { withMainActivity } = require('@expo/config-plugins');
 
 const IMPORTS = `import android.view.KeyEvent
-import android.widget.EditText
 import com.facebook.react.ReactApplication
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
@@ -47,31 +45,9 @@ const METHODS = `
     }
   }
 
-  override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-    val kc = event.keyCode
-    val isArrow = kc == KeyEvent.KEYCODE_DPAD_UP ||
-      kc == KeyEvent.KEYCODE_DPAD_DOWN ||
-      kc == KeyEvent.KEYCODE_DPAD_LEFT ||
-      kc == KeyEvent.KEYCODE_DPAD_RIGHT
-    // "editing" = a real text field currently holds native focus (onboarding /
-    // search). Only then do we hand D-pad + keyboard to the NATIVE Android focus
-    // system; everywhere else the JS focus engine is the single source of truth.
-    val editing = currentFocus is EditText
-    if (event.action == KeyEvent.ACTION_DOWN) {
-      // While editing, do NOT feed arrows to the JS engine — otherwise BOTH the
-      // engine and the native EditText focus move and desync. Feed everything else.
-      if (!(editing && isArrow)) {
-        blackstarEmitKey(kc)
-      }
-    }
-    // Consume the arrows ONLY while browsing (not editing): then only the JS ring
-    // moves, so the selection is always ONE, clearly visible element (fixes "non si
-    // vede quale si seleziona"). While editing, let the arrows fall through to the
-    // native focus + IME so the on-screen keyboard and field navigation work.
-    if (isArrow && !editing) {
-      return true
-    }
-    return super.dispatchKeyEvent(event)
+  override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+    blackstarEmitKey(keyCode)
+    return super.onKeyDown(keyCode, event)
   }
 `;
 

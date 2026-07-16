@@ -18,6 +18,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Native react-native-tvos build: EXPO_TV drives the config-tv plugin so
+    # prebuild generates the Android TV project.
+    env:
+      EXPO_TV: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,7 +45,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       # Android refuses to install an update APK whose versionCode is not higher
       # than the installed one. Tie it to the (monotonic) build number + a base
@@ -58,7 +62,7 @@ jobs:
           node -e "const fs=require('fs');const v=require('./app.json').expo.version;const f='./src/lib/version.ts';let s=fs.readFileSync(f,'utf8');s=s.replace(/export const APP_VERSION = '[^']*';/, \"export const APP_VERSION = '\"+v+\"';\");fs.writeFileSync(f,s);console.log('APP_VERSION =', v)"
 
       - name: Expo prebuild (Android)
-        run: npx expo prebuild --platform android --no-install
+        run: EXPO_TV=1 npx expo prebuild --platform android --no-install
 
       # Build only the ABIs used by real Android TV / boxes (arm64 + armv7).
       # Dropping x86/x86_64 (emulator-only) roughly halves build time and APK size.

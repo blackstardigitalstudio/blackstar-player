@@ -16,7 +16,9 @@ export default function Series() {
         categories={content.categories}
         kind="series"
         variant="poster"
+        folders
         onSelect={(i) => play.open(i)}
+        onResume={(e) => play.playEntry(e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position })}
       />
     </View>
   );

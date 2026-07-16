@@ -1,0 +1,88 @@
+name: Build TV Preview APK
+
+# Feasibility/preview build for the react-native-tvos NATIVE-FOCUS migration.
+# Separate package (studio.blackstar.player.tv) so it installs ALONGSIDE the
+# working app, published to its own "tv-preview" release. The main app (main
+# branch, studio.blackstar.player) is never touched. Made in Italy.
+
+on:
+  push:
+    branches: [tv-native]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TV: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle (with caching)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Set Android versionCode
+        run: |
+          node -e "const fs=require('fs');const p='./app.json';const j=require(p);j.expo.android.versionCode=200000+${{ github.run_number }};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');console.log('versionCode =', j.expo.android.versionCode)"
+
+      - name: Sync APP_VERSION
+        run: |
+          node -e "const fs=require('fs');const v=require('./app.json').expo.version;const f='./src/lib/version.ts';let s=fs.readFileSync(f,'utf8');s=s.replace(/export const APP_VERSION = '[^']*';/, \"export const APP_VERSION = '\"+v+\"';\");fs.writeFileSync(f,s);console.log('APP_VERSION =', v)"
+
+      - name: Expo prebuild (Android, TV)
+        run: EXPO_TV=1 npx expo prebuild --platform android --no-install
+
+      - name: Build release APK (arm64 + armv7)
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --build-cache \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk blackstar-player-tv.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackstar-player-tv-apk
+          path: blackstar-player-tv.apk
+          if-no-files-found: error
+
+      - name: Publish to tv-preview Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: tv-preview
+          make_latest: false
+          name: Blackstar TV (preview — focus nativo)
+          files: |
+            blackstar-player-tv.apk
+          body: |
+            ANTEPRIMA della migrazione al focus nativo Android TV (react-native-tvos).
+            Package separato `studio.blackstar.player.tv`: si installa ACCANTO all'app
+            normale, senza toccarla. Solo per test sul box. Made in Italy 🇮🇹

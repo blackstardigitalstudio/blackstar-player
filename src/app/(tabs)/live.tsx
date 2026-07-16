@@ -16,6 +16,7 @@ export default function Live() {
         categories={content.categories}
         kind="live"
         variant="tile"
+        folders
         onSelect={(i) => play.open(i)}
       />
     </View>

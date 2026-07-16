@@ -77,7 +77,18 @@ export function Spinner({ label }: { label?: string }) {
   );
 }
 
-export function Empty({ icon = 'tv-outline', title, hint }: { icon?: any; title: string; hint?: string }) {
+export function Empty({
+  icon = 'tv-outline',
+  title,
+  hint,
+  action,
+}: {
+  icon?: any;
+  title: string;
+  hint?: string;
+  // Optional call-to-action: an empty screen should say WHERE to act, not just what's missing.
+  action?: { label: string; icon?: any; onPress: () => void };
+}) {
   return (
     <View style={styles.center}>
       <Ionicons name={icon} size={64} color={colors.textFaint} />
@@ -88,6 +99,11 @@ export function Empty({ icon = 'tv-outline', title, hint }: { icon?: any; title:
         <Txt variant="small" style={{ marginTop: spacing.xs, textAlign: 'center', maxWidth: 460 }}>
           {hint}
         </Txt>
+      ) : null}
+      {action ? (
+        <View style={{ marginTop: spacing.lg }}>
+          <PrimaryButton label={action.label} icon={action.icon} onPress={action.onPress} autoFocus />
+        </View>
       ) : null}
     </View>
   );

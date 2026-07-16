@@ -2,7 +2,7 @@
   "expo": {
     "name": "Blackstar Player",
     "slug": "blackstar-player",
-    "version": "1.0.28",
+    "version": "1.0.29",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "blackstarplayer",
@@ -62,11 +62,11 @@
           }
         }
       ],
-      "./plugins/withTVRemote",
       "./plugins/withAndroidTV",
       "expo-localization",
       "react-native-google-cast",
-      "react-native-wireguard-vpn"
+      "react-native-wireguard-vpn",
+      "@react-native-tvos/config-tv"
     ],
     "experiments": {
       "typedRoutes": true,
