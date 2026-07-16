@@ -63,12 +63,15 @@ export function MediaGrid({
   variant = 'poster',
   header,
   empty,
+  autoFocusFirst,
 }: {
   items: MediaItem[];
   onSelect: (item: MediaItem) => void;
   variant?: Variant;
   header?: React.ReactElement;
   empty?: React.ReactElement;
+  /** When true, the first card gets D-pad focus on mount (e.g. after opening a folder). */
+  autoFocusFirst?: boolean;
 }) {
   const s = useListScroll(); // vertical, shared margin-based scroll-follow
   const [w, setW] = useState(0);
@@ -102,7 +105,12 @@ export function MediaGrid({
         s.ref.current?.scrollToOffset({ offset: Math.floor(info.index / cols) * rowH, animated: false });
       }}
       renderItem={({ item, index }: { item: MediaItem; index: number }) => (
-        <Focusable onSelect={() => onSelect(item)} onFocus={() => s.reveal(PAD_TOP + Math.floor(index / cols) * rowH, rowH)} focusStyle={EMPTY}>
+        <Focusable
+          onSelect={() => onSelect(item)}
+          onFocus={() => s.reveal(PAD_TOP + Math.floor(index / cols) * rowH, rowH)}
+          autoFocus={autoFocusFirst && index === 0}
+          focusStyle={EMPTY}
+        >
           {(f) => <CardFor item={item} focused={f} variant={variant} />}
         </Focusable>
       )}

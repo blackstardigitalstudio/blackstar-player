@@ -109,7 +109,7 @@ export default function Search() {
           ) : null}
 
           {results.length === 0 ? (
-            <Empty icon="sad-outline" title={t('search.noResults', { q })} />
+            <Empty icon="sad-outline" title={t('search.noResults', { q })} hint={t('search.noResultsHint')} />
           ) : (
             <>
               <Rail title={t('search.results', { n: results.length })} items={results} onSelect={go} variant="poster" />

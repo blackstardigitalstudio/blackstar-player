@@ -164,6 +164,12 @@ export default function Home() {
           icon="cloud-offline-outline"
           title={error ? t('home.cantLoad') : t('home.emptyList')}
           hint={error ?? t('home.emptyHint')}
+          // No list yet → send them straight to add one. On error → let them retry.
+          action={
+            error
+              ? { label: t('common.refresh'), icon: 'refresh', onPress: () => useStore.getState().refresh(true) }
+              : { label: t('set.addProfile'), icon: 'add', onPress: () => router.push('/onboarding') }
+          }
         />
       ) : (
         <FocusScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>

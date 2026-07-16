@@ -16,6 +16,7 @@ export default function Movies() {
         categories={content.categories}
         kind="movie"
         variant="poster"
+        folders
         onSelect={(i) => play.open(i)}
       />
     </View>

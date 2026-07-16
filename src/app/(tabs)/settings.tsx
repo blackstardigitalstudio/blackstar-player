@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { PinModal } from '@/components/PinModal';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
@@ -131,6 +132,11 @@ export default function Settings() {
         {t('set.title')}
       </Txt>
 
+      {/* Language right at the top: flags = recognise at a glance, one clear choice. */}
+      <Section title={t('set.language')}>
+        <LanguagePicker />
+      </Section>
+
       <Section title={t('set.secUsers')}>
         <Row
           icon="people"
@@ -237,12 +243,6 @@ export default function Settings() {
       </Section>
 
       <Section title={t('set.secInterface')}>
-        <Row
-          icon="language"
-          label={t('set.language')}
-          value={s.settings.language === 'it' ? 'Italiano' : 'Español'}
-          onPress={() => s.updateSettings({ language: s.settings.language === 'it' ? 'es' : 'it' })}
-        />
         <Row
           icon="swap-vertical"
           label={t('set.catOrder')}
