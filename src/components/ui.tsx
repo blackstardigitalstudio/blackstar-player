@@ -33,7 +33,7 @@ const variants = {
   h3: { fontSize: font.h3, fontWeight: font.weightSemi, color: colors.text },
   body: { fontSize: font.body, fontWeight: font.weightReg, color: colors.text },
   small: { fontSize: font.small, fontWeight: font.weightReg, color: colors.textMuted },
-  tiny: { fontSize: font.tiny, fontWeight: font.weightReg, color: colors.textFaint },
+  tiny: { fontSize: font.tiny, fontWeight: font.weightReg, color: colors.textMuted },
 } as const;
 
 export function Txt({ children, style, variant = 'body', color, numberOfLines }: TxtProps) {

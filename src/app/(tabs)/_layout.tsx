@@ -25,7 +25,10 @@ export default function TabsLayout() {
   }, [pathname, router]);
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }}>
+    // TV overscan safe margin: cheap TVs crop the outer ~5%, so keep all focusable
+    // content (NavRail icons on the left, grid cards on the right, top row) off the
+    // physical panel edges. One wrapper protects every tab screen.
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg, paddingVertical: 18, paddingHorizontal: 24 }}>
       <NavRail />
       {/* autoFocus: pressing RIGHT from the side menu lands the D-pad on a REAL
           element in the content (and remembers where you were). */}

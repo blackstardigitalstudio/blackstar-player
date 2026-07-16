@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useRef } from 'react';
-import { TVFocusGuideView, useTVEventHandler } from 'react-native';
-import type { RemoteKey } from './keys';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
+import { DeviceEventEmitter, TVFocusGuideView, useTVEventHandler } from 'react-native';
+import { androidKeyToRemote, type RemoteKey } from './keys';
 
 // TV-NATIVE build (react-native-tvos): there is NO custom focus engine — Android TV's
 // native focus handles D-pad navigation and selection on its own. These are thin
@@ -63,6 +63,19 @@ export function useKeyHandler(handler: KeyHandler, _deps: React.DependencyList =
     const k = TV_MAP[evt?.eventType];
     if (k) ref.current(k);
   });
+  // CH+/CH- are NOT delivered by the react-native-tvos TV event stream — they arrive
+  // via the native onKeyDown bridge (plugins/withTVRemote emits 'BlackstarRemoteKey',
+  // which only emits and calls super, so native focus is untouched). Forward ONLY the
+  // channel keys: arrows/select/back stay native, and only the Player reacts to
+  // channelup/channeldown (Home ignores them), so this can't disturb a screen mounted
+  // underneath. Numeric-keypad zapping needs a per-screen focus gate — left for later.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('BlackstarRemoteKey', (e: { keyCode: number }) => {
+      const k = androidKeyToRemote(e?.keyCode);
+      if (k === 'channelup' || k === 'channeldown') ref.current(k);
+    });
+    return () => sub.remove();
+  }, []);
 }
 
 export function useFocusLayer() {

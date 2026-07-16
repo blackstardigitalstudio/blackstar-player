@@ -72,7 +72,7 @@ export const font = {
   h3: r(20),
   body: r(17),
   small: r(15),
-  tiny: r(13),
+  tiny: r(14),
   weightBold: '800' as const,
   weightSemi: '600' as const,
   weightReg: '400' as const,

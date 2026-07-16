@@ -56,14 +56,13 @@ export function Focusable({
 }
 
 const styles = StyleSheet.create({
+  // Color-only focus ring (border + brighter fill, no scale/shadow) — matches the
+  // project's box-app-rules convention used by Card/FolderTile/Browser. Avoids the
+  // scale transform that can clip a near-edge control under TV overscan or jitter.
   focused: {
     borderColor: colors.borderFocus,
     borderWidth: focusRing.borderWidth,
     borderRadius: radius.md,
-    transform: [{ scale: focusRing.scale }],
-    shadowColor: colors.accent,
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 12,
+    backgroundColor: colors.surfaceHi,
   },
 });
