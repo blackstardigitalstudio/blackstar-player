@@ -7,9 +7,9 @@ M3U + Xtream Codes · Live · Film · Serie · EPG · Chromecast · VPN · Multi
 
 [![Scarica APK](https://img.shields.io/badge/⬇️%20Scarica-APK-A855F7?style=for-the-badge)](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest/download/blackstar-player.apk)
 [![Release](https://img.shields.io/github/v/release/blackstardigitalstudio/blackstar-player?style=for-the-badge&color=D946EF)](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest)
-[![Made in Italy](https://img.shields.io/badge/Made%20in-Italy%20🇮🇹-success?style=for-the-badge)](https://blackstar.digital)
+[![Made in Italy](https://img.shields.io/badge/Made%20in-Italy%20🇮🇹-success?style=for-the-badge)](https://www.blackstardigitalstudio.com/)
 
-di **[Blackstar Digital Studio](https://blackstar.digital)**
+di **[Blackstar Digital Studio](https://www.blackstardigitalstudio.com/)**
 
 </div>
 
