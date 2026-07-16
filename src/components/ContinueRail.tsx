@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
+import { FocusList, useListScroll } from '@/tv/FocusList';
 import { useT } from '@/i18n';
 import { colors, gradients, radius, spacing } from '@/theme/tokens';
 import type { ProgressEntry } from '@/lib/types';
@@ -77,6 +78,58 @@ export function ContinueRail({ entries, onSelect }: { entries: ProgressEntry[]; 
         )}
       />
     </View>
+  );
+}
+
+/** Vertical D-pad grid of the same resume cards — used by the "Continua a
+ * guardare" folder inside Film / Serie so you can jump back into a title. */
+export function ContinueGrid({
+  entries,
+  onSelect,
+  header,
+}: {
+  entries: ProgressEntry[];
+  onSelect: (e: ProgressEntry) => void;
+  header?: React.ReactElement;
+}) {
+  const s = useListScroll();
+  const [w, setW] = useState(0);
+  const pad = spacing.lg;
+  const gap = spacing.md;
+  const usable = (w || 960) - pad * 2;
+  const cols = Math.max(3, Math.floor((usable + gap) / (POSTER_W + gap)));
+  const rowH = POSTER_H + 48 + gap; // poster + title/label + row gap
+  const PAD_TOP = spacing.sm;
+  return (
+    <FocusList
+      ref={s.ref}
+      onLayout={(e: any) => {
+        setW(e.nativeEvent.layout.width);
+        s.onLayout(e);
+      }}
+      onScroll={s.onScroll}
+      data={entries}
+      key={`cont-${cols}`}
+      numColumns={cols}
+      keyExtractor={(e: ProgressEntry) => e.key}
+      ListHeaderComponent={header}
+      columnWrapperStyle={cols > 1 ? { gap, paddingHorizontal: pad } : undefined}
+      contentContainerStyle={{ gap, paddingTop: PAD_TOP, paddingBottom: spacing.xxl }}
+      getItemLayout={(_: any, index: number) => ({ length: rowH, offset: PAD_TOP + rowH * Math.floor(index / cols), index })}
+      onScrollToIndexFailed={(info: any) => {
+        s.ref.current?.scrollToOffset({ offset: Math.floor(info.index / cols) * rowH, animated: false });
+      }}
+      renderItem={({ item, index }: { item: ProgressEntry; index: number }) => (
+        <Focusable
+          onSelect={() => onSelect(item)}
+          autoFocus={index === 0}
+          onFocus={() => s.reveal(PAD_TOP + Math.floor(index / cols) * rowH, rowH)}
+          focusStyle={{}}
+        >
+          {(f) => <Card entry={item} focused={f} />}
+        </Focusable>
+      )}
+    />
   );
 }
 

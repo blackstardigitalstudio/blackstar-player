@@ -7,8 +7,9 @@ import { useT } from '@/i18n';
 import { useStore } from '@/store/useStore';
 import { sortCategories } from '@/lib/categories';
 import { colors, radius, spacing } from '@/theme/tokens';
-import type { Category, MediaItem, MediaKind } from '@/lib/types';
+import type { Category, MediaItem, MediaKind, ProgressEntry } from '@/lib/types';
 import { MediaGrid } from './Rail';
+import { ContinueGrid } from './ContinueRail';
 import { Empty, Txt } from './ui';
 
 // Box (D-pad) version of the phone's folder-tile browser: categories are big
@@ -100,6 +101,7 @@ export function Browser({
   categories,
   kind,
   onSelect,
+  onResume,
   variant,
   // Accepted for API parity with blackstar-mobile. The box always browses by
   // folders (with a direct grid fallback when a source has no categories).
@@ -110,6 +112,8 @@ export function Browser({
   categories: Category[];
   kind: MediaKind;
   onSelect: (item: MediaItem) => void;
+  /** Resume a half-watched title from its saved position ("Continua a guardare"). */
+  onResume?: (e: ProgressEntry) => void;
   variant: 'poster' | 'tile';
   folders?: boolean;
 }) {
@@ -151,6 +155,21 @@ export function Browser({
     return out;
   }, [recents, items]);
 
+  // In-progress titles of THIS section → "Continua a guardare" folder. Films are
+  // saved as 'movie', series episodes as 'episode' — the same entries the Home
+  // rail resumes from. Live is never saved.
+  const progress = useStore((s) => s.progress);
+  const contKind = kind === 'movie' ? 'movie' : kind === 'series' ? 'episode' : null;
+  const continueEntries = useMemo(
+    () =>
+      contKind
+        ? Object.values(progress)
+            .filter((p) => p.position > 5 && p.kind === contKind)
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+        : [],
+    [progress, contKind],
+  );
+
   // Which folder is open. null = show the folder grid.
   const [openCat, setOpenCat] = useState<string | null>(null);
 
@@ -174,15 +193,17 @@ export function Browser({
   useEffect(() => {
     if (openCat === 'fav' && !favItems.length) setOpenCat(null);
     else if (openCat === 'recent' && !recentItems.length) setOpenCat(null);
+    else if (openCat === 'continue' && !continueEntries.length) setOpenCat(null);
     else if (
       openCat &&
       openCat !== 'all' &&
       openCat !== 'fav' &&
       openCat !== 'recent' &&
+      openCat !== 'continue' &&
       !cats.some((c) => c.id === openCat)
     )
       setOpenCat(null);
-  }, [cats, openCat, favItems.length, recentItems.length]);
+  }, [cats, openCat, favItems.length, recentItems.length, continueEntries.length]);
 
   if (!items.length) {
     return <Empty title={t('br.empty', { title })} hint={t('br.emptyHint')} />;
@@ -202,7 +223,7 @@ export function Browser({
           : items.filter((i) => i.categoryId === id);
 
   // No categories at all (e.g. a flat M3U) → nothing to fold; show everything.
-  const hasFolders = cats.length || favItems.length || recentItems.length;
+  const hasFolders = cats.length || favItems.length || recentItems.length || continueEntries.length;
   if (!hasFolders) {
     return (
       <TVFocusGuideView autoFocus style={{ flex: 1 }}>
@@ -213,6 +234,7 @@ export function Browser({
 
   // Level 2: items inside the chosen folder, with a clear "back to categories" bar.
   if (openCat) {
+    const isCont = openCat === 'continue';
     const folderName =
       openCat === 'all'
         ? allLabel
@@ -220,8 +242,11 @@ export function Browser({
           ? t('br.favorites')
           : openCat === 'recent'
             ? t('br.recent')
-            : cats.find((c) => c.id === openCat)?.name ?? title;
-    const channels = filteredBy(openCat);
+            : isCont
+              ? t('home.continue')
+              : cats.find((c) => c.id === openCat)?.name ?? title;
+    const channels = isCont ? [] : filteredBy(openCat);
+    const count = isCont ? continueEntries.length : channels.length;
     const header = (
       <View>
         <Focusable onSelect={() => setOpenCat(null)} style={styles.backRow} focusStyle={styles.backRowFocus}>
@@ -235,13 +260,17 @@ export function Browser({
           )}
         </Focusable>
         <Txt variant="h2" style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
-          {folderName} <Txt variant="small" color={colors.textFaint}>{`· ${t(countKey, { n: channels.length })}`}</Txt>
+          {folderName} <Txt variant="small" color={colors.textFaint}>{`· ${t(countKey, { n: count })}`}</Txt>
         </Txt>
       </View>
     );
     return (
       <TVFocusGuideView autoFocus style={{ flex: 1 }}>
-        <MediaGrid items={channels} onSelect={onSelect} variant={variant} header={header} autoFocusFirst />
+        {isCont ? (
+          <ContinueGrid entries={continueEntries} onSelect={(e) => onResume?.(e)} header={header} />
+        ) : (
+          <MediaGrid items={channels} onSelect={onSelect} variant={variant} header={header} autoFocusFirst />
+        )}
       </TVFocusGuideView>
     );
   }
@@ -255,6 +284,7 @@ export function Browser({
       counts={counts}
       favCount={favItems.length}
       recentCount={recentItems.length}
+      continueCount={continueEntries.length}
       pins={pins}
       onTogglePin={togglePin}
       allLabel={allLabel}
@@ -272,6 +302,7 @@ function FolderGrid({
   counts,
   favCount,
   recentCount,
+  continueCount,
   pins,
   onTogglePin,
   allLabel,
@@ -284,6 +315,7 @@ function FolderGrid({
   counts: Map<string, number>;
   favCount: number;
   recentCount: number;
+  continueCount: number;
   pins: string[];
   onTogglePin: (id: string) => void;
   allLabel: string;
@@ -305,6 +337,7 @@ function FolderGrid({
   // "Preferiti" and "Visti di recente" first (if any), then "Tutti", then a
   // folder per category.
   const tiles = [
+    ...(continueCount > 0 ? [{ id: 'continue', name: t('home.continue'), count: continueCount, icon: 'play-circle' as any }] : []),
     ...(favCount > 0 ? [{ id: 'fav', name: t('br.favorites'), count: favCount, icon: 'heart' as any }] : []),
     ...(recentCount > 0 ? [{ id: 'recent', name: t('br.recent'), count: recentCount, icon: 'time' as any }] : []),
     { id: 'all', name: allLabel, count: total, icon: 'apps' as any },
@@ -342,7 +375,7 @@ function FolderGrid({
         s.ref.current?.scrollToOffset({ offset: Math.floor(info.index / cols) * rowH, animated: false });
       }}
       renderItem={({ item, index }: any) => {
-        const special = item.id === 'all' || item.id === 'fav' || item.id === 'recent';
+        const special = item.id === 'all' || item.id === 'fav' || item.id === 'recent' || item.id === 'continue';
         return (
           <FolderTile
             name={item.name}
