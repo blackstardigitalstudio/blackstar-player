@@ -95,7 +95,11 @@ export function useFocusLayer() {
  */
 export function FocusLayer({ children }: { children: React.ReactNode }) {
   return (
-    <Guide autoFocus trapFocusLeft trapFocusRight trapFocusUp trapFocusDown>
+    // flex:1 is ESSENTIAL: without it the guide sizes to content inside a
+    // Modal, the backdrop's own flex:1 collapses, and the card renders glued
+    // to the TOP edge half-hidden (the "pulsante aggiornamento mezzo nascosto"
+    // bug — it silently misplaced the updater, PIN and TVKeyboard modals).
+    <Guide style={{ flex: 1 }} autoFocus trapFocusLeft trapFocusRight trapFocusUp trapFocusDown>
       {children}
     </Guide>
   );
