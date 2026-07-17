@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusList, useListScroll } from '@/tv/FocusList';
 import { useT } from '@/i18n';
@@ -46,31 +46,31 @@ function Card({ entry, focused }: { entry: ProgressEntry; focused: boolean }) {
 
 export function ContinueRail({ entries, onSelect }: { entries: ProgressEntry[]; onSelect: (e: ProgressEntry) => void }) {
   const t = useT();
+  // Hooks BEFORE the empty-guard: the old `useRef` below the early return blew
+  // up ("rendered more hooks") the first time a resume entry appeared at runtime.
+  const s = useListScroll(true); // horizontal, shared margin-based scroll-follow (R3)
   if (!entries.length) return null;
   const itemW = POSTER_W + spacing.md;
-  const ref = useRef<FlatList>(null);
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <Txt variant="h3" style={{ marginLeft: spacing.lg, marginBottom: spacing.sm }}>
         {t('home.continue')}
       </Txt>
-      <FlatList
-        ref={ref}
+      <FocusList
+        ref={s.ref}
         horizontal
+        onScroll={s.onScroll}
+        onLayout={s.onLayout}
         data={entries}
-        keyExtractor={(e) => e.key}
+        keyExtractor={(e: ProgressEntry) => e.key}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
-        getItemLayout={(_, index) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
+        getItemLayout={(_: any, index: number) => ({ length: itemW, offset: spacing.lg + itemW * index, index })}
         onScrollToIndexFailed={() => {}}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index }: { item: ProgressEntry; index: number }) => (
           <Focusable
             onSelect={() => onSelect(item)}
-            onFocus={() => {
-              try {
-                ref.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
-              } catch {}
-            }}
+            onFocus={() => s.reveal(spacing.lg + itemW * index, itemW)}
             focusStyle={{}}
           >
             {(f) => <Card entry={item} focused={f} />}

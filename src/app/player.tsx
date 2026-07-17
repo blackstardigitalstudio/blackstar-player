@@ -321,8 +321,11 @@ export default function Player() {
         nativeControls={false}
       />
 
-      {/* tap anywhere to toggle overlay */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={showOverlay} />
+      {/* Tap (air-mouse) or OK anywhere to raise the overlay. D-pad-focusable
+          ONLY while the overlay is hidden: when the controls are up this
+          full-screen invisible Pressable must stay out of the native focus
+          order, or proximity search can land on it and the ring "vanishes". */}
+      <Pressable style={StyleSheet.absoluteFill} onPress={showOverlay} focusable={!overlay} />
 
       {buffering && !error ? (
         <View style={styles.center} pointerEvents="none">

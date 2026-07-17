@@ -172,6 +172,11 @@ export function GhostButton({ label, icon, onPress }: { label: string; icon?: an
   );
 }
 
+// True while ONE Field is force-reopening the IME (blur→refocus). Other Fields
+// must not react to the transient native focus they receive in that window —
+// reacting is what bounced the cursor back to the first field of the form.
+let kbReopening = false;
+
 export function Field({
   label,
   value,
@@ -201,16 +206,23 @@ export function Field({
   const [show, setShow] = React.useState(false);
   const localRef = React.useRef<TextInput>(null);
   const inputRef = inputRefProp ?? localRef;
-  // Raise the on-screen keyboard (IME) on OK. On a box, pressing OK blurs then
-  // refocuses the field, which reliably forces the IME open even when a plain
-  // .focus() alone wouldn't (Android TV suppresses the implicit show). This is the
-  // KNOWN-GOOD v1.0.19 behaviour — the native side no longer force-shows, so we do
-  // it here.
+  // Raise the on-screen keyboard (IME) on OK. blur→focus is the only public RN
+  // way to FORCE showSoftInput when the input is already bookkept as focused
+  // (TextInput.focus() early-returns in that case) — proven on the box since
+  // v1.0.19. BUT during the ~60ms unfocused window Android's FocusFinder hands
+  // native focus to the FIRST focusable on screen, whose Field wrapper used to
+  // pull its own input and STEAL the refocus ("il fuoco rimbalza sul primo
+  // campo"). The module-level kbReopening flag makes every other Field ignore
+  // that transient focus, so the delayed refocus always wins the race.
   const openKeyboard = () => {
     const el = inputRef.current;
     if (!el) return;
+    kbReopening = true;
     el.blur();
-    setTimeout(() => inputRef.current?.focus(), 40);
+    setTimeout(() => {
+      kbReopening = false;
+      inputRef.current?.focus();
+    }, 60);
   };
   // Keep the focused field visible ABOVE the on-screen keyboard. Runs both when the
   // keyboard first opens AND every time this field gains focus — so advancing from
@@ -234,7 +246,12 @@ export function Field({
     <Focusable
       autoFocus={autoFocus}
       onSelect={openKeyboard}
-      onFocus={() => inputRef.current?.focus()}
+      // Documented tvOS pattern: the wrapper pulls native focus into its
+      // EditText. Skipped while another Field is force-reopening the keyboard,
+      // or this pull would steal its refocus (the focus-bounce bug).
+      onFocus={() => {
+        if (!kbReopening) inputRef.current?.focus();
+      }}
       style={{ borderRadius: radius.md }}
       focusStyle={{}}
     >
@@ -265,8 +282,13 @@ export function Field({
               // risale"). The IME stays open (blurOnSubmit=false) and just re-targets.
               // The last field uses "done" and closes the keyboard.
               returnKeyType={onSubmit ? 'next' : 'done'}
-              blurOnSubmit={!onSubmit}
-              onSubmitEditing={() => (onSubmit ? onSubmit() : inputRef.current?.blur())}
+              // NEVER blur on submit: on native TV focus an unfocused instant
+              // makes Android bounce the cursor to the first field (same family
+              // as the openKeyboard bug). "next" re-targets the IME via
+              // onSubmit; on "done" the keyboard simply stays and the user
+              // closes it with BACK — the standard Android TV gesture.
+              submitBehavior="submit"
+              onSubmitEditing={() => onSubmit?.()}
               onFocus={() => {
                 setFocused(true);
                 focusSelf();

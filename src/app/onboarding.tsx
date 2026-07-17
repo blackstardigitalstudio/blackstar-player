@@ -63,7 +63,20 @@ export default function Onboarding() {
     setAutoFocusHost(hosts.length); // focus + open keyboard on the DNS just added
     setHosts((h) => [...h, '']);
   };
-  const removeHost = (i: number) => setHosts((h) => h.filter((_, j) => j !== i));
+  const removeHost = (i: number) => {
+    setHosts((h) => h.filter((_, j) => j !== i));
+    // The focused trash button unmounts with its row: without a new target,
+    // Android would bounce native focus to the FIRST focusable of the screen
+    // (and its Field would open the keyboard on "nome"). Land on the main DNS
+    // field instead — the user is editing the DNS list anyway.
+    dnsRef.current?.focus();
+  };
+  // Switching Xtream/M3U remounts the DNS rows: without a reset, the row
+  // matching autoFocusHost would re-steal focus and reopen the keyboard.
+  const switchMode = (m: Mode) => {
+    setAutoFocusHost(-1);
+    setMode(m);
+  };
 
   async function submit() {
     setError(null);
@@ -144,8 +157,8 @@ export default function Onboarding() {
           {t('ob.chooseHint')}
         </Txt>
         <View style={styles.tabs}>
-          <ModeChip label={t('ob.xtream')} icon="key" active={mode === 'xtream'} onPress={() => setMode('xtream')} />
-          <ModeChip label={t('ob.m3u')} icon="link" active={mode === 'm3u'} onPress={() => setMode('m3u')} />
+          <ModeChip label={t('ob.xtream')} icon="key" active={mode === 'xtream'} onPress={() => switchMode('xtream')} />
+          <ModeChip label={t('ob.m3u')} icon="link" active={mode === 'm3u'} onPress={() => switchMode('m3u')} />
         </View>
 
         <View style={styles.kbHint}>

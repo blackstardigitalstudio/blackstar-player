@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, StyleSheet, TextInput, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusLayer } from '@/tv/RemoteProvider';
@@ -20,6 +20,7 @@ export function PinModal({
   const t = useT();
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
+  const pinRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (visible) {
@@ -45,21 +46,37 @@ export function PinModal({
           <Txt variant="h3" style={{ marginBottom: spacing.md }}>
             {title}
           </Txt>
-          <TextInput
-            value={pin}
-            onChangeText={(v) => {
-              setErr(false);
-              setPin(v.replace(/\D/g, '').slice(0, 4));
-            }}
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={4}
+          {/* On Android TV a bare TextInput never receives D-pad focus: once the
+              user moved to Annulla/Conferma the PIN field was unreachable. Same
+              documented wrapper pattern as Field: the Focusable pulls native
+              focus into the EditText (and opens the IME). autoFocus here — not
+              on the Conferma button — because typing the PIN IS the modal. */}
+          <Focusable
             autoFocus
-            placeholder="••••"
-            placeholderTextColor={colors.textFaint}
-            style={styles.input}
-            onSubmitEditing={submit}
-          />
+            onSelect={() => pinRef.current?.focus()}
+            onFocus={() => pinRef.current?.focus()}
+            focusStyle={{}}
+          >
+            {(ring) => (
+              <TextInput
+                ref={pinRef}
+                value={pin}
+                onChangeText={(v) => {
+                  setErr(false);
+                  setPin(v.replace(/\D/g, '').slice(0, 4));
+                }}
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={4}
+                autoFocus
+                placeholder="••••"
+                placeholderTextColor={colors.textFaint}
+                style={[styles.input, ring && { borderColor: colors.borderFocus }]}
+                submitBehavior="submit"
+                onSubmitEditing={submit}
+              />
+            )}
+          </Focusable>
           {err ? (
             <Txt variant="small" color={colors.danger} style={{ marginTop: 8 }}>
               {t('pin.wrong')}
@@ -73,7 +90,7 @@ export function PinModal({
                 </Txt>
               )}
             </Focusable>
-            <PrimaryButton label={t('pin.confirm')} onPress={submit} autoFocus />
+            <PrimaryButton label={t('pin.confirm')} onPress={submit} />
           </View>
         </View>
       </View>
