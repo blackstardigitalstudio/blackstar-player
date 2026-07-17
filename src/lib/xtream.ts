@@ -88,10 +88,20 @@ export function normalizeHost(input: string): string {
 // common cause of "login failed". Use the widely-accepted one.
 export const IPTV_UA = 'okhttp/4.9.3';
 
-export async function fetchTextTimeout(
+// Some panels do the OPPOSITE: an anti-bot/Cloudflare rule answers 403 to the
+// okhttp UA (real case: "Error al cargar la lista HTTP 403" on a valid M3U
+// link). On a 403 the fetch is retried with the UAs of players every panel
+// accepts — VLC, then a desktop browser. First non-403 answer wins.
+const UA_FALLBACKS = [
+  IPTV_UA,
+  'VLC/3.0.18 LibVLC/3.0.18',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+];
+
+async function fetchOnce(
   url: string,
-  ms = 8000,
-  headers: Record<string, string> = { 'User-Agent': IPTV_UA },
+  ms: number,
+  headers: Record<string, string>,
 ): Promise<{ ok: boolean; status: number; text: string }> {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), ms);
@@ -106,6 +116,20 @@ export async function fetchTextTimeout(
   } finally {
     clearTimeout(id);
   }
+}
+
+export async function fetchTextTimeout(
+  url: string,
+  ms = 8000,
+  headers?: Record<string, string>,
+): Promise<{ ok: boolean; status: number; text: string }> {
+  if (headers) return fetchOnce(url, ms, headers);
+  let last: { ok: boolean; status: number; text: string } | null = null;
+  for (const ua of UA_FALLBACKS) {
+    last = await fetchOnce(url, ms, { 'User-Agent': ua });
+    if (last.status !== 403) return last;
+  }
+  return last!;
 }
 
 function apiBase(c: SourceConfig) {

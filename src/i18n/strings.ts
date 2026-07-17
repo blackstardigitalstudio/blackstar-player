@@ -52,6 +52,8 @@ const it: Dict = {
     'Per scrivere: seleziona un campo e premi OK — si apre la tastiera dell’app. Scegli le lettere con le frecce e conferma con OK, poi premi “Fine”.',
   'ob.errM3uUrl': 'Inserisci l’URL della lista M3U.',
   'ob.errHttp': 'Errore caricamento lista (HTTP {code}).',
+  'ob.errHttp403':
+    'Il server ha rifiutato la richiesta (403). Controlla che il link sia copiato per intero e che l’abbonamento sia attivo.',
   'ob.errEmpty': 'Nessun canale trovato nella lista.',
   'ob.errXtreamFields': 'Inserisci almeno un indirizzo server, username e password.',
   'ob.errGeneric': 'Accesso non riuscito. Controlla credenziali e DNS.',
@@ -288,6 +290,8 @@ const es: Dict = {
     'Para escribir: selecciona un campo y pulsa OK — se abre el teclado de la app. Elige las letras con las flechas y confirma con OK, luego pulsa “Listo”.',
   'ob.errM3uUrl': 'Introduce la URL de la lista M3U.',
   'ob.errHttp': 'Error al cargar la lista (HTTP {code}).',
+  'ob.errHttp403':
+    'El servidor ha rechazado la solicitud (403). Comprueba que el enlace est� copiado completo y que la suscripci�n est� activa.',
   'ob.errEmpty': 'No se han encontrado canales en la lista.',
   'ob.errXtreamFields': 'Rellena al menos una dirección de servidor, usuario y contraseña.',
   'ob.errGeneric': 'No se ha podido acceder. Revisa credenciales y DNS.',

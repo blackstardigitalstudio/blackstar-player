@@ -75,7 +75,7 @@ export default function Onboarding() {
         // Bounded fetch (connect + body) with an IPTV-friendly UA — a slow host
         // can no longer hang first-run onboarding forever.
         const { ok, status, text } = await fetchTextTimeout(m3uUrl.trim(), 15000);
-        if (!ok) throw new Error(t('ob.errHttp', { code: status }));
+        if (!ok) throw new Error(status === 403 ? t('ob.errHttp403') : t('ob.errHttp', { code: status }));
         const content = parseM3U(text);
         if (!content.live.length && !content.movies.length && !content.series.length) {
           throw new Error(t('ob.errEmpty'));
