@@ -83,7 +83,7 @@ export default function Profiles() {
                 {(name.trim() || '?').charAt(0).toUpperCase()}
               </Txt>
             </View>
-            <Field label={t('prof.name')} value={name} onChangeText={setName} placeholder="Es. Marco" autoCapitalize="sentences" />
+            <Field label={t('prof.name')} value={name} onChangeText={setName} placeholder="Es. Marco" />
             <View style={styles.swatchRow}>
               {PROFILE_COLORS.map((c) => (
                 <Focusable key={c} onSelect={() => setColor(c)} style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchSel]} focusStyle={styles.swatchFocus}>

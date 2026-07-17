@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { Rail } from '@/components/Rail';
+import { TVKeyboard } from '@/components/TVKeyboard';
 import { Empty, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { usePlayback } from '@/lib/playback';
@@ -19,8 +20,7 @@ export default function Search() {
   const content = useVisibleContent();
   const [q, setQ] = useState('');
   const [dq, setDq] = useState(''); // debounced query — keeps typing smooth on huge lists
-  const [focused, setFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const [kb, setKb] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => setDq(q), 220);
@@ -57,33 +57,28 @@ export default function Search() {
     <View style={{ flex: 1 }}>
       <View style={styles.searchBar}>
         <Ionicons name="search" size={22} color={colors.textMuted} />
-        <Focusable
-          autoFocus
-          onSelect={() => inputRef.current?.focus()}
-          onFocus={() => inputRef.current?.focus()}
-          style={{ flex: 1 }}
-          focusStyle={{}}
-        >
-          {(ring, focusSelf) => (
-            <TextInput
-              ref={inputRef}
-              value={q}
-              onChangeText={setQ}
-              placeholder={t('search.ph')}
-              placeholderTextColor={colors.textFaint}
-              autoCorrect={false}
-              // Never blur on "done": an unfocused instant bounces D-pad focus
-              // to the first element on screen. BACK closes the keyboard.
-              submitBehavior="submit"
-              onFocus={() => {
-                setFocused(true);
-                focusSelf();
-              }}
-              onBlur={() => setFocused(false)}
-              style={[styles.input, (focused || ring) && { borderColor: colors.borderFocus }]}
-            />
+        {/* OK opens the app's own TVKeyboard — no TextInput/system IME, which is
+            broken with D-pad on react-native-tvos (focus escapes, IME won't open). */}
+        <Focusable autoFocus onSelect={() => setKb(true)} style={{ flex: 1 }} focusStyle={{}}>
+          {(ring) => (
+            <Text
+              numberOfLines={1}
+              style={[styles.input, !q && { color: colors.textFaint }, ring && { borderColor: colors.borderFocus }]}
+            >
+              {q || t('search.ph')}
+            </Text>
           )}
         </Focusable>
+        <TVKeyboard
+          visible={kb}
+          title={t('search.ph')}
+          value={q}
+          onDone={(text) => {
+            setQ(text);
+            setKb(false);
+          }}
+          onCancel={() => setKb(false)}
+        />
         {q ? (
           <Focusable onSelect={() => setQ('')} style={styles.clear} focusStyle={{ borderColor: colors.borderFocus }}>
             <Ionicons name="close" size={18} color={colors.textMuted} />

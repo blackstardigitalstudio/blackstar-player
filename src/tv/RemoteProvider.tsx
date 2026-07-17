@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { DeviceEventEmitter, TVFocusGuideView, useTVEventHandler } from 'react-native';
+import { DeviceEventEmitter, TVFocusGuideView, useTVEventHandler, View } from 'react-native';
 import { androidKeyToRemote, type RemoteKey } from './keys';
+
+// react-native-web ships neither TVFocusGuideView nor useTVEventHandler. Fall
+// back to inert equivalents so screens and modals can be smoke-tested in a
+// browser; on the box (react-native-tvos) the real implementations are used.
+const Guide: any = TVFocusGuideView ?? View;
+const useTVEvents: (h: (evt: any) => void) => void = useTVEventHandler ?? (() => {});
 
 // TV-NATIVE build (react-native-tvos): there is NO custom focus engine — Android TV's
 // native focus handles D-pad navigation and selection on its own. These are thin
@@ -59,7 +65,7 @@ const TV_MAP: Record<string, RemoteKey> = {
 export function useKeyHandler(handler: KeyHandler, _deps: React.DependencyList = []) {
   const ref = useRef(handler);
   ref.current = handler;
-  useTVEventHandler((evt: any) => {
+  useTVEvents((evt: any) => {
     const k = TV_MAP[evt?.eventType];
     if (k) ref.current(k);
   });
@@ -89,8 +95,8 @@ export function useFocusLayer() {
  */
 export function FocusLayer({ children }: { children: React.ReactNode }) {
   return (
-    <TVFocusGuideView autoFocus trapFocusLeft trapFocusRight trapFocusUp trapFocusDown>
+    <Guide autoFocus trapFocusLeft trapFocusRight trapFocusUp trapFocusDown>
       {children}
-    </TVFocusGuideView>
+    </Guide>
   );
 }

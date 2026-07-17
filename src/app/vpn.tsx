@@ -3,7 +3,7 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import { GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
+import { Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { useVpn } from '@/store/useVpn';
@@ -24,7 +24,6 @@ export default function Vpn() {
   const [name, setName] = useState('');
   const [conf, setConf] = useState('');
   const [err, setErr] = useState<string | null>(null);
-  const nameRef = useRef<TextInput>(null);
   const confRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -133,20 +132,10 @@ export default function Vpn() {
           {t('vpn.import')}
         </Txt>
         <View style={{ gap: spacing.sm }}>
-          <Focusable onSelect={() => nameRef.current?.focus()} onFocus={() => nameRef.current?.focus()} focusStyle={{}}>
-            {(ring) => (
-              <TextInput
-                ref={nameRef}
-                value={name}
-                onChangeText={setName}
-                placeholder={t('vpn.nameOpt')}
-                placeholderTextColor={colors.textFaint}
-                // Never blur on "done" — see Field: blur bounces D-pad focus.
-                submitBehavior="submit"
-                style={[styles.input, ring && { borderColor: colors.borderFocus }]}
-              />
-            )}
-          </Focusable>
+          {/* App TVKeyboard via Field — no TextInput/system IME (broken with
+              D-pad on react-native-tvos). The multiline config box below stays
+              a TextInput: configs are pasted with an air-mouse, not typed. */}
+          <Field label={t('vpn.nameOpt')} value={name} onChangeText={setName} />
           <Focusable onSelect={() => confRef.current?.focus()} onFocus={() => confRef.current?.focus()} focusStyle={{}}>
             {(ring) => (
               <TextInput

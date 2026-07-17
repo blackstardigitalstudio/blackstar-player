@@ -4,24 +4,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-// Internal RN module (same one TextInputState uses): its `focus` command is the
-// only way to force requestFocus + showSoftInput WITHOUT blurring first — see
-// Field.openKeyboard. No public API exposes this; path is stable in RN 0.7x-0.8x
-// and in the react-native-tvos fork.
-// @ts-ignore — shipped as untyped Flow source
-import { Commands as AndroidTextInputCommands } from 'react-native/Libraries/Components/TextInput/AndroidTextInputNativeComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
-import { useFocusScroll } from '@/tv/FocusScroll';
+import { TVKeyboard } from '@/components/TVKeyboard';
 import { colors, font, gradients, radius, spacing } from '@/theme/tokens';
 
 type TxtProps = {
@@ -185,10 +177,7 @@ export function Field({
   placeholder,
   secureTextEntry,
   keyboardType,
-  autoCapitalize = 'none',
   autoFocus,
-  inputRef: inputRefProp,
-  onSubmit,
 }: {
   label: string;
   value: string;
@@ -196,113 +185,58 @@ export function Field({
   placeholder?: string;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'url' | 'email-address';
-  autoCapitalize?: 'none' | 'sentences';
   autoFocus?: boolean;
-  /** External ref to this field's input, so the previous field can focus it. */
-  inputRef?: React.RefObject<TextInput | null>;
-  /** Pressing "next" on the keyboard runs this (usually: focus the next field). */
-  onSubmit?: () => void;
 }) {
-  const [focused, setFocused] = React.useState(false);
+  // NO TextInput and NO system IME, on purpose. The Android TV IME +
+  // react-native-tvos TextInput focus is broken upstream (issues #901/#155/#129:
+  // the cursor escapes to the first focusable, OK won't open the keyboard) and
+  // made forms un-fillable on the box. The field is a plain Focusable — the one
+  // primitive that has always worked — and OK opens the app's own TVKeyboard.
   const [show, setShow] = React.useState(false);
-  const localRef = React.useRef<TextInput>(null);
-  const inputRef = inputRefProp ?? localRef;
-  // Raise the on-screen keyboard (IME) on OK by dispatching the NATIVE focus
-  // command directly. It performs requestFocus + showSoftInput even when the
-  // input is already focused — which TextInput.focus() does NOT (it early-
-  // returns via TextInputState when the input is bookkept as focused; that
-  // no-op is the very reason the old blur→refocus hack existed). The hack
-  // blurred first, and ANY unfocused instant lets Android's FocusFinder throw
-  // native focus at the first focusable on screen — the "il fuoco rimbalza sul
-  // primo campo" bug that survived every JS-timing workaround. Direct command
-  // = zero blur = no window in which focus can escape, at any box latency.
-  const openKeyboard = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    AndroidTextInputCommands.focus(el as never);
-  };
-  // Keep the focused field visible ABOVE the on-screen keyboard. Runs both when the
-  // keyboard first opens AND every time this field gains focus — so advancing from
-  // one field to the next (keyboard already open) still scrolls the new field up
-  // (fixes "il campo DNS viene coperto dalla tastiera").
-  const scroll = useFocusScroll();
-  const scrollIntoView = React.useCallback(() => {
-    setTimeout(() => {
-      inputRef.current?.measureInWindow((x, y, w, h) => {
-        if (w || h) scroll?.scrollToRect({ x, y, w, h });
-      });
-    }, 140);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scroll]);
-  React.useEffect(() => {
-    if (!focused) return;
-    const sub = Keyboard.addListener('keyboardDidShow', scrollIntoView);
-    return () => sub.remove();
-  }, [focused, scrollIntoView]);
+  const [kb, setKb] = React.useState(false);
+  const masked = secureTextEntry && !show;
   return (
-    <Focusable
-      autoFocus={autoFocus}
-      onSelect={openKeyboard}
-      // Documented tvOS pattern: the wrapper pulls native focus into its
-      // EditText on D-pad arrival. Plain focus() here on purpose (NOT the
-      // forced native command): its bookkeeping no-op is harmless on arrival
-      // and avoids popping the keyboard while merely passing over fields.
-      onFocus={() => inputRef.current?.focus()}
-      style={{ borderRadius: radius.md }}
-      focusStyle={{}}
-    >
-      {(ring, focusSelf) => {
-        const active = focused || ring; // selected via D-pad OR native keyboard focus
-        return (
-        <View style={{ gap: 6 }}>
-          <Txt variant="small" color={active ? colors.accent : colors.textMuted}>
-            {active ? '▸ ' : ''}
-            {label}
-          </Txt>
-          <View style={[styles.fieldWrap, active && styles.fieldWrapActive]}>
-            <TextInput
-              ref={inputRef}
-              value={value}
-              onChangeText={onChangeText}
-              placeholder={placeholder}
-              placeholderTextColor={colors.textFaint}
-              // Show the password in clear text when the eye toggle is on.
-              secureTextEntry={secureTextEntry && !show}
-              keyboardType={keyboardType}
-              autoCapitalize={autoCapitalize}
-              autoCorrect={false}
-              // "Next" on the keyboard focuses the NEXT field's native input directly
-              // (onSubmit is wired by onboarding to nextRef.focus()). This moves the
-              // native EditText focus AND — via the next field's onFocus/focusSelf —
-              // the JS engine focus, keeping the two in sync (no more "scende e
-              // risale"). The IME stays open (blurOnSubmit=false) and just re-targets.
-              // The last field uses "done" and closes the keyboard.
-              returnKeyType={onSubmit ? 'next' : 'done'}
-              // NEVER blur on submit: on native TV focus an unfocused instant
-              // makes Android bounce the cursor to the first field (same family
-              // as the openKeyboard bug). "next" re-targets the IME via
-              // onSubmit; on "done" the keyboard simply stays and the user
-              // closes it with BACK — the standard Android TV gesture.
-              submitBehavior="submit"
-              onSubmitEditing={() => onSubmit?.()}
-              onFocus={() => {
-                setFocused(true);
-                focusSelf();
-                scrollIntoView();
-              }}
-              onBlur={() => setFocused(false)}
-              style={[styles.input, secureTextEntry && { paddingRight: 52 }, active && styles.inputActive]}
-            />
-            {secureTextEntry ? (
-              <Focusable onSelect={() => setShow((v) => !v)} style={styles.eye} focusStyle={{ borderColor: colors.borderFocus, borderWidth: 1 }}>
-                {(f) => <Ionicons name={show ? 'eye-off' : 'eye'} size={22} color={f ? colors.accent : colors.textMuted} />}
-              </Focusable>
-            ) : null}
+    <>
+      <Focusable autoFocus={autoFocus} onSelect={() => setKb(true)} style={{ borderRadius: radius.md }} focusStyle={{}}>
+        {(ring) => (
+          <View style={{ gap: 6 }}>
+            <Txt variant="small" color={ring ? colors.accent : colors.textMuted}>
+              {ring ? '▸ ' : ''}
+              {label}
+            </Txt>
+            <View style={[styles.fieldWrap, ring && styles.fieldWrapActive]}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.input,
+                  !value && { color: colors.textFaint },
+                  secureTextEntry && { paddingRight: 52 },
+                  ring && styles.inputActive,
+                ]}
+              >
+                {value ? (masked ? '•'.repeat(value.length) : value) : placeholder || ' '}
+              </Text>
+              {secureTextEntry ? (
+                <Focusable onSelect={() => setShow((v) => !v)} style={styles.eye} focusStyle={{ borderColor: colors.borderFocus, borderWidth: 1 }}>
+                  {(f) => <Ionicons name={show ? 'eye-off' : 'eye'} size={22} color={f ? colors.accent : colors.textMuted} />}
+                </Focusable>
+              ) : null}
+            </View>
           </View>
-        </View>
-        );
-      }}
-    </Focusable>
+        )}
+      </Focusable>
+      <TVKeyboard
+        visible={kb}
+        title={label}
+        value={value}
+        kind={keyboardType === 'url' ? 'url' : 'text'}
+        onDone={(text) => {
+          onChangeText(text);
+          setKb(false);
+        }}
+        onCancel={() => setKb(false)}
+      />
+    </>
   );
 }
 

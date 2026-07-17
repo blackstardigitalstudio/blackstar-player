@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
@@ -34,13 +34,6 @@ export default function Onboarding() {
   const [error, setError] = useState<string | null>(null);
   const [autoFocusHost, setAutoFocusHost] = useState<number>(-1);
 
-  // Refs so pressing "next" on the keyboard jumps to the following field.
-  const nameRef = useRef<TextInput>(null);
-  const m3uRef = useRef<TextInput>(null);
-  const userRef = useRef<TextInput>(null);
-  const passRef = useRef<TextInput>(null);
-  const dnsRef = useRef<TextInput>(null);
-
   // Edit mode: prefill the form from the existing source.
   useEffect(() => {
     if (!editId) return;
@@ -63,14 +56,7 @@ export default function Onboarding() {
     setAutoFocusHost(hosts.length); // focus + open keyboard on the DNS just added
     setHosts((h) => [...h, '']);
   };
-  const removeHost = (i: number) => {
-    setHosts((h) => h.filter((_, j) => j !== i));
-    // The focused trash button unmounts with its row: without a new target,
-    // Android would bounce native focus to the FIRST focusable of the screen
-    // (and its Field would open the keyboard on "nome"). Land on the main DNS
-    // field instead — the user is editing the DNS list anyway.
-    dnsRef.current?.focus();
-  };
+  const removeHost = (i: number) => setHosts((h) => h.filter((_, j) => j !== i));
   // Switching Xtream/M3U remounts the DNS rows: without a reset, the row
   // matching autoFocusHost would re-steal focus and reopen the keyboard.
   const switchMode = (m: Mode) => {
@@ -169,15 +155,7 @@ export default function Onboarding() {
         </View>
 
         <View style={styles.card}>
-          <Field
-            label={t('ob.profileName')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('ob.profilePh')}
-            autoCapitalize="sentences"
-            inputRef={nameRef}
-            onSubmit={() => (mode === 'm3u' ? m3uRef : userRef).current?.focus()}
-          />
+          <Field label={t('ob.profileName')} value={name} onChangeText={setName} placeholder={t('ob.profilePh')} />
 
           {mode === 'm3u' ? (
             <Field
@@ -186,12 +164,11 @@ export default function Onboarding() {
               onChangeText={setM3uUrl}
               placeholder="http://provider/get.php?...type=m3u_plus"
               keyboardType="url"
-              inputRef={m3uRef}
             />
           ) : (
             <>
-              <Field label={t('ob.username')} value={username} onChangeText={setUsername} placeholder={t('ob.usernamePh')} inputRef={userRef} onSubmit={() => passRef.current?.focus()} />
-              <Field label={t('ob.password')} value={password} onChangeText={setPassword} placeholder={t('ob.passwordPh')} secureTextEntry inputRef={passRef} onSubmit={() => dnsRef.current?.focus()} />
+              <Field label={t('ob.username')} value={username} onChangeText={setUsername} placeholder={t('ob.usernamePh')} />
+              <Field label={t('ob.password')} value={password} onChangeText={setPassword} placeholder={t('ob.passwordPh')} secureTextEntry />
 
               <View style={{ gap: spacing.sm }}>
                 <Txt variant="small">{t('ob.dnsTitle')}</Txt>
@@ -205,7 +182,6 @@ export default function Onboarding() {
                         placeholder="http://dns.server:8080"
                         keyboardType="url"
                         autoFocus={i === autoFocusHost}
-                        inputRef={i === 0 ? dnsRef : undefined}
                       />
                     </View>
                     {i > 0 ? (

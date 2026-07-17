@@ -49,7 +49,7 @@ const it: Dict = {
   'ob.disclaimer':
     'Blackstar Player non fornisce contenuti né server: usa solo la lista o l’abbonamento che inserisci tu. Nessun dato lascia il dispositivo.',
   'ob.typeHint':
-    'Per scrivere: seleziona un campo e premi OK per aprire la tastiera. Puoi digitare dal telefono con l’app “Google TV” o “Android TV Remote” collegata al box (tocca l’icona tastiera), oppure con una tastiera Bluetooth.',
+    'Per scrivere: seleziona un campo e premi OK — si apre la tastiera dell’app. Scegli le lettere con le frecce e conferma con OK, poi premi “Fine”.',
   'ob.errM3uUrl': 'Inserisci l’URL della lista M3U.',
   'ob.errHttp': 'Errore caricamento lista (HTTP {code}).',
   'ob.errEmpty': 'Nessun canale trovato nella lista.',
@@ -184,6 +184,10 @@ const it: Dict = {
   'pin.wrong': 'PIN errato',
   'pin.locked': 'Contenuto protetto da PIN',
 
+  'kb.done': 'Fine',
+  'kb.cancel': 'Annulla',
+  'kb.space': 'Spazio',
+
   'nav.guide': 'Guida',
   'guide.title': 'Guida TV',
   'guide.onlyXtream': 'La guida programmi è disponibile con i profili Xtream.',
@@ -281,7 +285,7 @@ const es: Dict = {
   'ob.disclaimer':
     'Blackstar Player no ofrece contenidos ni servidores: usa solo la lista o la suscripción que introduces tú. Ningún dato sale del dispositivo.',
   'ob.typeHint':
-    'Para escribir: selecciona un campo y pulsa OK para abrir el teclado. Puedes teclear desde el móvil con la app “Google TV” o “Android TV Remote” conectada al box (toca el icono del teclado), o con un teclado Bluetooth.',
+    'Para escribir: selecciona un campo y pulsa OK — se abre el teclado de la app. Elige las letras con las flechas y confirma con OK, luego pulsa “Listo”.',
   'ob.errM3uUrl': 'Introduce la URL de la lista M3U.',
   'ob.errHttp': 'Error al cargar la lista (HTTP {code}).',
   'ob.errEmpty': 'No se han encontrado canales en la lista.',
@@ -415,6 +419,10 @@ const es: Dict = {
   'pin.cancel': 'Cancelar',
   'pin.wrong': 'PIN incorrecto',
   'pin.locked': 'Contenido protegido con PIN',
+
+  'kb.done': 'Listo',
+  'kb.cancel': 'Cancelar',
+  'kb.space': 'Espacio',
 
   'nav.guide': 'Guía',
   'guide.title': 'Guía TV',
