@@ -112,7 +112,10 @@ async function fetchOnce(
   } catch (e: any) {
     // Turn raw fetch failures into a message the user can act on.
     if (e?.name === 'AbortError') throw new Error('Timeout: il server non risponde (DNS lento o errato).');
-    throw new Error('Impossibile raggiungere il server. Controlla il DNS/indirizzo e la connessione.');
+    // Keep the technical cause visible: without it every network-level
+    // failure (DNS, TLS, reset, cleartext block) looks identical and is
+    // impossible to diagnose from a screenshot.
+    throw new Error(`Impossibile raggiungere il server (${e?.message || 'errore di rete'}). Controlla indirizzo e connessione.`);
   } finally {
     clearTimeout(id);
   }
@@ -124,12 +127,22 @@ export async function fetchTextTimeout(
   headers?: Record<string, string>,
 ): Promise<{ ok: boolean; status: number; text: string }> {
   if (headers) return fetchOnce(url, ms, headers);
+  // A dropped/reset retry must NOT mask an earlier REAL answer: some anti-bot
+  // filters 403 the first UA and then cut the connection for the others, and
+  // v1.0.18 surfaced that cut as "server unreachable" hiding the true 403.
   let last: { ok: boolean; status: number; text: string } | null = null;
+  let lastErr: unknown = null;
   for (const ua of UA_FALLBACKS) {
-    last = await fetchOnce(url, ms, { 'User-Agent': ua });
+    try {
+      last = await fetchOnce(url, ms, { 'User-Agent': ua });
+    } catch (e) {
+      lastErr = e;
+      continue;
+    }
     if (last.status !== 403) return last;
   }
-  return last!;
+  if (last) return last;
+  throw lastErr;
 }
 
 function apiBase(c: SourceConfig) {
