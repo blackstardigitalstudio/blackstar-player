@@ -72,6 +72,9 @@ export default function Search() {
               placeholder={t('search.ph')}
               placeholderTextColor={colors.textFaint}
               autoCorrect={false}
+              // Never blur on "done": an unfocused instant bounces D-pad focus
+              // to the first element on screen. BACK closes the keyboard.
+              submitBehavior="submit"
               onFocus={() => {
                 setFocused(true);
                 focusSelf();

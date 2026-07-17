@@ -141,6 +141,8 @@ export default function Vpn() {
                 onChangeText={setName}
                 placeholder={t('vpn.nameOpt')}
                 placeholderTextColor={colors.textFaint}
+                // Never blur on "done" — see Field: blur bounces D-pad focus.
+                submitBehavior="submit"
                 style={[styles.input, ring && { borderColor: colors.borderFocus }]}
               />
             )}

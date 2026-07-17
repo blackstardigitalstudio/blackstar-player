@@ -13,6 +13,12 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+// Internal RN module (same one TextInputState uses): its `focus` command is the
+// only way to force requestFocus + showSoftInput WITHOUT blurring first — see
+// Field.openKeyboard. No public API exposes this; path is stable in RN 0.7x-0.8x
+// and in the react-native-tvos fork.
+// @ts-ignore — shipped as untyped Flow source
+import { Commands as AndroidTextInputCommands } from 'react-native/Libraries/Components/TextInput/AndroidTextInputNativeComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Focusable } from '@/tv/Focusable';
 import { useFocusScroll } from '@/tv/FocusScroll';
@@ -172,11 +178,6 @@ export function GhostButton({ label, icon, onPress }: { label: string; icon?: an
   );
 }
 
-// True while ONE Field is force-reopening the IME (blur→refocus). Other Fields
-// must not react to the transient native focus they receive in that window —
-// reacting is what bounced the cursor back to the first field of the form.
-let kbReopening = false;
-
 export function Field({
   label,
   value,
@@ -206,23 +207,19 @@ export function Field({
   const [show, setShow] = React.useState(false);
   const localRef = React.useRef<TextInput>(null);
   const inputRef = inputRefProp ?? localRef;
-  // Raise the on-screen keyboard (IME) on OK. blur→focus is the only public RN
-  // way to FORCE showSoftInput when the input is already bookkept as focused
-  // (TextInput.focus() early-returns in that case) — proven on the box since
-  // v1.0.19. BUT during the ~60ms unfocused window Android's FocusFinder hands
-  // native focus to the FIRST focusable on screen, whose Field wrapper used to
-  // pull its own input and STEAL the refocus ("il fuoco rimbalza sul primo
-  // campo"). The module-level kbReopening flag makes every other Field ignore
-  // that transient focus, so the delayed refocus always wins the race.
+  // Raise the on-screen keyboard (IME) on OK by dispatching the NATIVE focus
+  // command directly. It performs requestFocus + showSoftInput even when the
+  // input is already focused — which TextInput.focus() does NOT (it early-
+  // returns via TextInputState when the input is bookkept as focused; that
+  // no-op is the very reason the old blur→refocus hack existed). The hack
+  // blurred first, and ANY unfocused instant lets Android's FocusFinder throw
+  // native focus at the first focusable on screen — the "il fuoco rimbalza sul
+  // primo campo" bug that survived every JS-timing workaround. Direct command
+  // = zero blur = no window in which focus can escape, at any box latency.
   const openKeyboard = () => {
     const el = inputRef.current;
     if (!el) return;
-    kbReopening = true;
-    el.blur();
-    setTimeout(() => {
-      kbReopening = false;
-      inputRef.current?.focus();
-    }, 60);
+    AndroidTextInputCommands.focus(el as never);
   };
   // Keep the focused field visible ABOVE the on-screen keyboard. Runs both when the
   // keyboard first opens AND every time this field gains focus — so advancing from
@@ -247,11 +244,10 @@ export function Field({
       autoFocus={autoFocus}
       onSelect={openKeyboard}
       // Documented tvOS pattern: the wrapper pulls native focus into its
-      // EditText. Skipped while another Field is force-reopening the keyboard,
-      // or this pull would steal its refocus (the focus-bounce bug).
-      onFocus={() => {
-        if (!kbReopening) inputRef.current?.focus();
-      }}
+      // EditText on D-pad arrival. Plain focus() here on purpose (NOT the
+      // forced native command): its bookkeeping no-op is harmless on arrival
+      // and avoids popping the keyboard while merely passing over fields.
+      onFocus={() => inputRef.current?.focus()}
       style={{ borderRadius: radius.md }}
       focusStyle={{}}
     >
