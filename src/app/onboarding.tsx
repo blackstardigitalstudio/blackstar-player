@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
-import { LanguagePicker } from '@/components/LanguagePicker';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore } from '@/store/useStore';
@@ -134,10 +133,11 @@ export default function Onboarding() {
           {t('ob.tagline')}
         </Txt>
 
-        {/* Language first: pick Italiano or Español right away (flags = instantly clear). */}
-        <View style={{ marginBottom: spacing.lg }}>
-          <LanguagePicker />
-        </View>
+        {/* NOTE: the language picker was removed from onboarding on the box. On Android
+            TV its focusable chips sat at the very top of a text-entry screen, so when a
+            Field blurs to force the on-screen keyboard, native focus fell back to the
+            first focusable (the language chips) — the cursor jumped up to "language" and
+            typing broke. Language is set in Settings instead. (Phone build keeps it.) */}
 
         {/* One plain line so the first choice is obvious, not a blind guess. */}
         <Txt variant="small" color={colors.textMuted} style={{ marginBottom: spacing.sm }}>
