@@ -146,6 +146,12 @@ const it: Dict = {
   'upd.upToDate': 'L’app è già aggiornata.',
   'upd.checkFailed': 'Impossibile controllare gli aggiornamenti. Riprova più tardi.',
   'upd.installHint': 'La prima volta Android chiederà di consentire l’installazione da questa app.',
+  'err.title': 'Qualcosa si è bloccato',
+  'err.body':
+    'L’app non è riuscita ad aprire questa schermata. Prova a riaprirla. Se succede ancora, svuota la lista salvata: la ricarichiamo da capo dal tuo provider (non perdi profili né preferiti).',
+  'err.retry': 'Riprova',
+  'err.reset': 'Svuota la lista salvata',
+  'err.detail': 'Dettaglio per l’assistenza',
   'player.internal': 'Interno',
   'player.ask': 'Chiedi sempre',
 
@@ -291,7 +297,7 @@ const es: Dict = {
   'ob.errM3uUrl': 'Introduce la URL de la lista M3U.',
   'ob.errHttp': 'Error al cargar la lista (HTTP {code}).',
   'ob.errHttp403':
-    'El servidor ha rechazado la solicitud (403). Comprueba que el enlace est� copiado completo y que la suscripci�n est� activa.',
+    'El servidor ha rechazado la solicitud (403). Comprueba que el enlace est� copiado completo y que la suscripci�n est� activa.',
   'ob.errEmpty': 'No se han encontrado canales en la lista.',
   'ob.errXtreamFields': 'Rellena al menos una dirección de servidor, usuario y contraseña.',
   'ob.errGeneric': 'No se ha podido acceder. Revisa credenciales y DNS.',
@@ -384,6 +390,12 @@ const es: Dict = {
   'upd.upToDate': 'La app ya está actualizada.',
   'upd.checkFailed': 'No se pudo comprobar actualizaciones. Inténtalo más tarde.',
   'upd.installHint': 'La primera vez Android pedirá permitir la instalación desde esta app.',
+  'err.title': 'Algo se ha bloqueado',
+  'err.body':
+    'La app no ha podido abrir esta pantalla. Vuelve a intentarlo. Si sigue pasando, vacía la lista guardada: la cargamos de nuevo desde tu proveedor (no pierdes perfiles ni favoritos).',
+  'err.retry': 'Reintentar',
+  'err.reset': 'Vaciar la lista guardada',
+  'err.detail': 'Detalle para el soporte',
   'player.internal': 'Interno',
   'player.ask': 'Preguntar siempre',
 

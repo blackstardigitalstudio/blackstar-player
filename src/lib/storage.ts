@@ -59,14 +59,33 @@ export async function cacheContent(sourceId: string, content: LoadedContent) {
   }
 }
 
+/**
+ * Hard ceiling for the cached catalog. Reading the file means holding the whole
+ * JSON text AND the parsed objects in memory at once: past a few tens of MB a
+ * TV box (which has far less RAM than a phone) is killed by the OS before it can
+ * show anything — a native OOM, no JS error to catch, just a black screen at
+ * every launch. Providers grow their lists over time, so a catalog that opened
+ * fine for months can cross the line one day and then fail forever. Over the
+ * limit we drop the cache and reload from the provider instead.
+ */
+const MAX_CACHE_BYTES = 24 * 1024 * 1024;
+
 export async function loadCachedContent(sourceId: string): Promise<LoadedContent | null> {
+  const uri = contentUri(sourceId);
   try {
-    const uri = contentUri(sourceId);
     const info = await FS.getInfoAsync(uri);
     if (!info.exists) return null;
+    if (typeof info.size === 'number' && info.size > MAX_CACHE_BYTES) {
+      console.warn(`[Blackstar] cached catalog too big (${info.size} bytes) — dropped`);
+      await FS.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      return null;
+    }
     const txt = await FS.readAsStringAsync(uri);
     return txt ? (JSON.parse(txt) as LoadedContent) : null;
-  } catch {
+  } catch (e) {
+    // A corrupt/half-written file would fail on every launch: bin it.
+    console.warn('[Blackstar] cached catalog unreadable — dropped:', e);
+    await FS.deleteAsync(uri, { idempotent: true }).catch(() => {});
     return null;
   }
 }

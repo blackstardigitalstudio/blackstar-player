@@ -144,42 +144,51 @@ export const useStore = create<State>((set, get) => ({
   setUnlocked: (v) => set({ unlocked: v }),
 
   hydrate: async () => {
-    const [sources, activeId, settings, profilesRaw, activeProfileRaw] = await Promise.all([
-      getJSON<SourceConfig[]>(KEYS.sources, []),
-      getJSON<string | null>(KEYS.activeSource, null),
-      getJSON<Settings>(KEYS.settings, DEFAULT_SETTINGS),
-      getJSON<Profile[]>(KEYS.profiles, []),
-      getJSON<string | null>(KEYS.activeProfile, null),
-    ]);
-    const lastLiveId = await getJSON<string | null>(KEYS.lastLive, null);
+    // Startup must never hang: whatever fails while reading the saved state, we
+    // still come up (empty if needed) instead of leaving `hydrated` false
+    // forever — that leaves the box stuck on the logo with a remote that does
+    // nothing, which reads as a dead app.
+    try {
+      const [sources, activeId, settings, profilesRaw, activeProfileRaw] = await Promise.all([
+        getJSON<SourceConfig[]>(KEYS.sources, []),
+        getJSON<string | null>(KEYS.activeSource, null),
+        getJSON<Settings>(KEYS.settings, DEFAULT_SETTINGS),
+        getJSON<Profile[]>(KEYS.profiles, []),
+        getJSON<string | null>(KEYS.activeProfile, null),
+      ]);
+      const lastLiveId = await getJSON<string | null>(KEYS.lastLive, null);
 
-    // Ensure at least one profile exists.
-    let profiles = profilesRaw;
-    if (profiles.length === 0) {
-      profiles = [{ id: `p_${Date.now()}`, name: 'Profilo 1', color: PROFILE_COLORS[0], createdAt: Date.now() }];
-      await setJSON(KEYS.profiles, profiles);
-    }
-    const activeProfileId = activeProfileRaw && profiles.find((p) => p.id === activeProfileRaw) ? activeProfileRaw : profiles[0].id;
-    await setJSON(KEYS.activeProfile, activeProfileId);
+      // Ensure at least one profile exists.
+      let profiles = profilesRaw;
+      if (profiles.length === 0) {
+        profiles = [{ id: `p_${Date.now()}`, name: 'Profilo 1', color: PROFILE_COLORS[0], createdAt: Date.now() }];
+        await setJSON(KEYS.profiles, profiles);
+      }
+      const activeProfileId = activeProfileRaw && profiles.find((p) => p.id === activeProfileRaw) ? activeProfileRaw : profiles[0].id;
+      await setJSON(KEYS.activeProfile, activeProfileId);
 
-    const data = await loadProfileData(activeProfileId);
-    const active = activeId && sources.find((s) => s.id === activeId) ? activeId : sources[0]?.id ?? null;
+      const data = await loadProfileData(activeProfileId);
+      const active = activeId && sources.find((s) => s.id === activeId) ? activeId : sources[0]?.id ?? null;
 
-    set({
-      sources,
-      activeId: active,
-      settings: { ...DEFAULT_SETTINGS, ...settings },
-      profiles,
-      activeProfileId,
-      lastLiveId,
-      ...data,
-      hydrated: true,
-    });
+      set({
+        sources,
+        activeId: active,
+        settings: { ...DEFAULT_SETTINGS, ...settings },
+        profiles,
+        activeProfileId,
+        lastLiveId,
+        ...data,
+        hydrated: true,
+      });
 
-    if (active) {
-      const cached = await loadCachedContent(active);
-      if (cached) set({ content: cached });
-      get().refresh(false);
+      if (active) {
+        const cached = await loadCachedContent(active);
+        if (cached) set({ content: cached });
+        get().refresh(false).catch(() => {});
+      }
+    } catch (e) {
+      console.error('[Blackstar] hydrate failed:', e);
+      set({ hydrated: true });
     }
   },
 
