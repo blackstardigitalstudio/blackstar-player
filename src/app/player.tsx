@@ -291,10 +291,14 @@ export default function Player() {
   /** Jump within an on-demand title; clamped so we never seek past the end. */
   const seekBy = useCallback(
     (secs: number) => {
-      const dur = player.duration ?? 0;
-      const pos = player.currentTime ?? 0;
-      const max = dur > 0 ? dur - 2 : Number.MAX_SAFE_INTEGER;
-      player.currentTime = Math.max(0, Math.min(max, pos + secs));
+      // Seeking a track that is still loading throws — same guard the resume
+      // seek uses. A dead remote key must never take the whole screen down.
+      try {
+        const dur = player.duration ?? 0;
+        const pos = player.currentTime ?? 0;
+        const max = dur > 0 ? dur - 2 : Number.MAX_SAFE_INTEGER;
+        player.currentTime = Math.max(0, Math.min(max, pos + secs));
+      } catch {}
     },
     [player],
   );
