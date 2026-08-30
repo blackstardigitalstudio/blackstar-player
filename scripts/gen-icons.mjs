@@ -67,6 +67,26 @@ async function run() {
     .toFile(join(OUT, 'splash-icon.png'));
   console.log('✓ splash-icon.png');
 
+  // Android TV / Fire TV launcher banner. Leanback launchers (Google TV, Fire TV
+  // "Your apps") draw a 16:9 BANNER, not the square icon: feeding them ic_launcher
+  // gets it stretched/cropped. 320x180 is the xhdpi reference size.
+  const bannerText = `<svg width="320" height="180" xmlns="http://www.w3.org/2000/svg">
+    <text x="132" y="88" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" fill="#F5F3FF" letter-spacing="1.5">BLACKSTAR</text>
+    <text x="133" y="115" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" fill="#A855F7" letter-spacing="5">PLAYER</text></svg>`;
+  const bannerGlow = `<svg width="320" height="180" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="g" cx="0.22" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#D946EF" stop-opacity="0.42"/><stop offset="1" stop-color="#D946EF" stop-opacity="0"/>
+    </radialGradient></defs>
+    <rect width="320" height="180" fill="${BG}"/><rect width="320" height="180" fill="url(#g)"/></svg>`;
+  await sharp(Buffer.from(bannerGlow))
+    .composite([
+      { input: await tinted(96), top: 42, left: 22 },
+      { input: Buffer.from(bannerText), top: 0, left: 0 },
+    ])
+    .png()
+    .toFile(join(OUT, 'tv-banner.png'));
+  console.log('✓ tv-banner.png');
+
   console.log('Done.');
 }
 

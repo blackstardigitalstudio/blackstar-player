@@ -9,7 +9,6 @@ import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
 import { getShortEpg, rebuildLiveUrl, type EpgItem } from '@/lib/xtream';
-import { CastControls } from '@/components/CastControls';
 import { useT } from '@/i18n';
 import type { MediaItem, SourceConfig } from '@/lib/types';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -289,6 +288,17 @@ export default function Player() {
     showOverlay();
   }, [player, showOverlay]);
 
+  /** Jump within an on-demand title; clamped so we never seek past the end. */
+  const seekBy = useCallback(
+    (secs: number) => {
+      const dur = player.duration ?? 0;
+      const pos = player.currentTime ?? 0;
+      const max = dur > 0 ? dur - 2 : Number.MAX_SAFE_INTEGER;
+      player.currentTime = Math.max(0, Math.min(max, pos + secs));
+    },
+    [player],
+  );
+
   useKeyHandler(
     (key) => {
       // NB: do NOT handle 'back' here — the OS/expo-router already pops the
@@ -298,13 +308,33 @@ export default function Player() {
         togglePlay();
         return true;
       }
-      if (cur.isLive && (key === 'channelup' || key === 'channeldown')) {
-        zap(key === 'channelup' ? 1 : -1);
+      // Change channel. CH+/CH- is what a box remote has; the media skip keys and
+      // the D-pad up/down are what a Fire TV remote has instead (it ships NO
+      // channel keys at all) — a full-screen video has nothing above or below to
+      // move the focus onto, so up/down are free to mean "next/previous channel",
+      // exactly like a TV. Only reachable while this screen is on top.
+      if (cur.isLive) {
+        if (key === 'channelup' || key === 'next' || key === 'up') {
+          zap(1);
+          return true;
+        }
+        if (key === 'channeldown' || key === 'prev' || key === 'down') {
+          zap(-1);
+          return true;
+        }
+      } else if (key === 'fastforward' || key === 'next') {
+        seekBy(30);
+        return true;
+      } else if (key === 'rewind' || key === 'prev') {
+        seekBy(-10);
         return true;
       }
+      // INFO on a box remote: just raise the controls + the now/next strip, which
+      // showOverlay() above already did.
+      if (key === 'info') return true;
       return false;
     },
-    [cur.isLive, zap, togglePlay, showOverlay],
+    [cur.isLive, zap, togglePlay, showOverlay, seekBy],
   );
 
   const fav = cur.item ? favorites.some((f) => f.id === cur.item!.id) : false;
@@ -382,9 +412,17 @@ export default function Player() {
 
           <View style={styles.controls} pointerEvents="box-none">
             <CtrlButton icon="arrow-back" label={t('common.back')} onPress={() => router.back()} />
-            {cur.isLive ? <CtrlButton icon="play-skip-back" label={t('pl.prev')} onPress={() => zap(-1)} /> : null}
+            {cur.isLive ? (
+              <CtrlButton icon="play-skip-back" label={t('pl.prev')} onPress={() => zap(-1)} />
+            ) : (
+              <CtrlButton icon="play-back" label={t('pl.back10')} onPress={() => seekBy(-10)} />
+            )}
             <CtrlButton icon={playing ? 'pause' : 'play'} label={playing ? t('pl.pause') : t('pl.play')} autoFocus onPress={togglePlay} />
-            {cur.isLive ? <CtrlButton icon="play-skip-forward" label={t('pl.next')} onPress={() => zap(1)} /> : null}
+            {cur.isLive ? (
+              <CtrlButton icon="play-skip-forward" label={t('pl.next')} onPress={() => zap(1)} />
+            ) : (
+              <CtrlButton icon="play-forward" label={t('pl.fwd30')} onPress={() => seekBy(30)} />
+            )}
             <CtrlButton
               icon="resize"
               label={t('pl.format')}
@@ -402,7 +440,6 @@ export default function Player() {
                 onPress={() => cur.item && toggleFavorite(cur.item)}
               />
             ) : null}
-            <CastControls url={cur.candidates[0]} title={cur.title} />
           </View>
         </>
       ) : null}

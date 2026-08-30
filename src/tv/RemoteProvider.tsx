@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
 import { DeviceEventEmitter, TVFocusGuideView, useTVEventHandler, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { androidKeyToRemote, type RemoteKey } from './keys';
 
 // react-native-web ships neither TVFocusGuideView nor useTVEventHandler. Fall
@@ -61,27 +62,61 @@ const TV_MAP: Record<string, RemoteKey> = {
   menu: 'back',
 };
 
-/** Screen-level handler for MEDIA/remote keys (play/pause, ff/rew, menu). */
+// Keys taken from the NATIVE onKeyDown bridge (plugins/withTVRemote emits
+// 'BlackstarRemoteKey' and always calls super → it never consumes anything, so
+// native focus stays untouched). react-native-tvos' own TV event stream does not
+// deliver these at all:
+//   • channelup/channeldown — the CH+/CH- of an Android box remote;
+//   • digit:0-9 — the numeric keypad, for number-bar zapping;
+//   • up/down — how you change channel on a remote that HAS no CH+/CH-, which is
+//     every Amazon Fire TV remote. Only the Player acts on them (in a full-screen
+//     video there is nothing above or below to move the focus to), and the focus
+//     gate below keeps every other screen out of it.
+// left/right/select/back are deliberately absent: those drive native focus.
+function isBridgeKey(k: RemoteKey): boolean {
+  return (
+    k === 'channelup' ||
+    k === 'channeldown' ||
+    k === 'up' ||
+    k === 'down' ||
+    k === 'info' ||
+    k.startsWith('digit:')
+  );
+}
+
+/** Screen-level handler for MEDIA/remote keys (play/pause, ff/rew, zap, digits). */
 export function useKeyHandler(handler: KeyHandler, _deps: React.DependencyList = []) {
   const ref = useRef(handler);
   ref.current = handler;
+
+  // Only the screen actually on top may react. Home stays MOUNTED underneath the
+  // Player, so without this gate a digit pressed while watching would also make
+  // Home jump to another channel, and the Player's zap keys would fight it.
+  const onTop = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      onTop.current = true;
+      return () => {
+        onTop.current = false;
+      };
+    }, []),
+  );
+  const fire = useCallback((k: RemoteKey) => {
+    if (onTop.current) ref.current(k);
+  }, []);
+
   useTVEvents((evt: any) => {
     const k = TV_MAP[evt?.eventType];
-    if (k) ref.current(k);
+    if (k) fire(k);
   });
-  // CH+/CH- are NOT delivered by the react-native-tvos TV event stream — they arrive
-  // via the native onKeyDown bridge (plugins/withTVRemote emits 'BlackstarRemoteKey',
-  // which only emits and calls super, so native focus is untouched). Forward ONLY the
-  // channel keys: arrows/select/back stay native, and only the Player reacts to
-  // channelup/channeldown (Home ignores them), so this can't disturb a screen mounted
-  // underneath. Numeric-keypad zapping needs a per-screen focus gate — left for later.
+
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener('BlackstarRemoteKey', (e: { keyCode: number }) => {
       const k = androidKeyToRemote(e?.keyCode);
-      if (k === 'channelup' || k === 'channeldown') ref.current(k);
+      if (k && isBridgeKey(k)) fire(k);
     });
     return () => sub.remove();
-  }, []);
+  }, [fire]);
 }
 
 export function useFocusLayer() {

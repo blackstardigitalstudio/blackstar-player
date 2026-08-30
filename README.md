@@ -3,7 +3,8 @@
 # ⭐ Blackstar Player
 
 **Player IPTV moderno, velocissimo e ottimizzato per TV / box Android.**
-M3U + Xtream Codes · Live · Film · Serie · EPG · Chromecast · VPN · Multiutente.
+M3U + Xtream Codes · Live · Film · Serie · EPG · VPN · Multiutente.
+Box Android · Android TV · **Amazon Fire TV**.
 
 [![Scarica APK](https://img.shields.io/badge/⬇️%20Scarica-APK-A855F7?style=for-the-badge)](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest/download/blackstar-player.apk)
 [![Release](https://img.shields.io/github/v/release/blackstardigitalstudio/blackstar-player?style=for-the-badge&color=D946EF)](https://github.com/blackstardigitalstudio/blackstar-player/releases/latest)
@@ -15,8 +16,8 @@ di **[Blackstar Digital Studio](https://www.blackstardigitalstudio.com/)**
 
 > **EN — TL;DR:** Blackstar Player is a fast, TV-optimized IPTV player for Android boxes. It supports M3U
 > playlists and Xtream Codes (with multi-DNS failover), Live/Movies/Series, a scrollable EPG guide,
-> Netflix-style profiles & recommendations, resume playback, true Chromecast, a built-in WireGuard VPN,
-> parental PIN, and IT/ES localization. **100% self-contained: no merchant, no account, no ads, no external
+> Netflix-style profiles & recommendations, resume playback, a built-in WireGuard VPN,
+> parental PIN, and IT/ES localization. Runs on Android boxes, Android TV and **Amazon Fire TV**. **100% self-contained: no merchant, no account, no ads, no external
 > server.** It only talks to the IPTV provider *you* enter.
 
 ---
@@ -32,6 +33,21 @@ Installazione:
 
 > ⚠️ Blackstar Player **non fornisce alcun contenuto né alcun server**: riproduce solo la lista o
 > l'abbonamento che inserisci tu.
+
+### 🔥 Amazon Fire TV
+
+Funziona sui Fire TV con **Fire OS 6 o successivo** (Fire TV Stick 2ª gen e successivi, Stick Lite,
+4K, 4K Max, Cube, Smart TV con Fire TV). I Fire TV più vecchi con **Fire OS 5** non sono supportati:
+sono fermi ad Android 5.1 e l'app richiede Android 7 o superiore.
+
+1. Fire TV → *Impostazioni* → *My Fire TV* → *Opzioni sviluppatore* → attiva **App da fonti sconosciute**.
+2. Installa **Downloader** dall'App Store di Amazon, aprilo e scarica:
+   `https://github.com/blackstardigitalstudio/blackstar-player/releases/latest/download/blackstar-player.apk`
+   (in alternativa da PC: `adb connect <ip-del-firetv>` e `adb install -r blackstar-player.apk`).
+3. Da lì in poi l'app **si aggiorna da sola**: te lo chiede all'avvio quando esce una versione nuova.
+
+**Telecomando Fire TV** — non ha i tasti canale, quindi con i comandi nascosti la **freccia su/giù**
+cambia canale; ⏯ mette in pausa, ⏪/⏩ scorrono avanti e indietro nei film.
 
 ---
 
@@ -66,8 +82,10 @@ Installazione:
 - **Ordine categorie**: predefinito / **alfabetico** / **più viste** / **manuale** (riordino su-giù).
 
 ### 📡 Trasmissione su TV
-- **Chromecast vero** (Google Cast SDK): invia lo stream a una TV/Chromecast con i controlli.
-- **Condivisione schermo** (mirroring) di Android come alternativa per i box senza Google Play Services.
+- **Condivisione schermo** (mirroring) di Android: Impostazioni → *Trasmissione*.
+- *Nota:* il Chromecast (Google Cast) è stato tolto — il Cast SDK si disattiva da solo su ogni
+  dispositivo in modalità TV (e Fire TV non ha i servizi Google), quindi era un pulsante che non
+  faceva nulla. Su un box il video è già sulla TV.
 
 ### 🛡️ Privacy e sicurezza
 - **VPN integrata (WireGuard)**: importa un config `.conf`, connetti e **maschera il tuo IP** su tutto il
@@ -77,8 +95,9 @@ Installazione:
 ### ⚡ Prestazioni e UX
 - **Velocissima**: cache dei contenuti su **file locale** (riapertura istantanea anche con liste enormi),
   liste virtualizzate, motore **Hermes**, **nuova architettura** React Native.
-- **Ottimizzata per TV e telecomando** (D-pad): navigazione a fuoco, tasti freccia/OK/Indietro, numeri,
-  canale +/−; categoria **LEANBACK_LAUNCHER** per Android TV.
+- **Ottimizzata per TV e telecomando** (D-pad): navigazione a fuoco nativa Android TV, tasti
+  freccia/OK/Indietro, numeri, canale +/−, tasti multimediali; categoria **LEANBACK_LAUNCHER** e
+  **banner 16:9** per Android TV / Fire TV.
 - **Responsive**: su telefono l'interfaccia si adatta (scala, niente fuoco "appiccicato", griglie corrette).
 - **Bilingue Italiano / Español** (lingua iniziale dal dispositivo, cambiabile dalle Impostazioni).
 - **Tema Blackstar**: nero profondo + accento **viola → magenta**, con il logo reale del brand.
@@ -93,7 +112,9 @@ Installazione:
 | Cambiare profilo utente | Impostazioni → **Utenti** → *Cambia profilo* |
 | Guida programmi | Scheda **Guida** |
 | Attivare la VPN | Impostazioni → **VPN / Anonimato** → *Importa config WireGuard* → *Connetti* |
-| Trasmettere su TV | Pulsante **Cast** nel player (Chromecast) o Impostazioni → *Trasmissione* (mirroring) |
+| Cambiare canale al volo | **CH+/CH−**, i tasti **⏭/⏮**, oppure **freccia su/giù** a comandi nascosti (Fire TV) |
+| Avanti / indietro nei film | **⏩/⏪** del telecomando, o i pulsanti **−10 sec / +30 sec** nel player |
+| Trasmettere su TV | Impostazioni → *Trasmissione* (mirroring dello schermo) |
 | Blocco adulti | Impostazioni → **Controllo parentale** (PIN) |
 | Ordine categorie | Impostazioni → **Ordine categorie** |
 
@@ -121,7 +142,7 @@ Oppure: la **GitHub Action** [`build-apk.yml`](.github/workflows/build-apk.yml) 
 
 ### Stack
 `Expo SDK 56` · `React Native 0.85 (new arch)` · `expo-router` · `expo-video` · `zustand` ·
-`react-native-google-cast` · `react-native-wireguard-vpn` · `expo-file-system` · `expo-localization`.
+`react-native-wireguard-vpn` · `expo-file-system` · `expo-localization`.
 
 ### Struttura
 ```
@@ -129,7 +150,7 @@ src/
   app/            rotte expo-router (onboarding, tabs, player, serie, vpn, categorie, profili)
     (tabs)/       Home · Live · Film · Serie · Guida · Cerca · Impostazioni
   components/     UI kit, card, rail, browser, nav, EPG, VPN, PIN
-  lib/            M3U, Xtream, EPG, ricerca, consigli, categorie, cast, VPN/WireGuard, storage
+  lib/            M3U, Xtream, EPG, ricerca, consigli, categorie, VPN/WireGuard, storage
   store/          stato globale (zustand) + VPN
   tv/             motore di fuoco D-pad + bridge tasti telecomando
   theme/          design token Blackstar

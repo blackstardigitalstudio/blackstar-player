@@ -18,6 +18,9 @@ export type PlayerMode = 'internal' | 'ask' | 'mxplayer' | 'vlc';
 
 export interface Settings {
   language: Lang;
+  /** True once the user picked a language themselves (first-run step / Settings).
+   *  While false the app runs on the device locale and the first-run step asks. */
+  languageChosen: boolean;
   liveExt: 'ts' | 'm3u8';
   autoStartLastChannel: boolean;
   survivalMode: boolean;
@@ -45,6 +48,7 @@ function deviceLang(): Lang {
 
 const DEFAULT_SETTINGS: Settings = {
   language: deviceLang(),
+  languageChosen: false,
   liveExt: 'ts',
   autoStartLastChannel: true,
   survivalMode: true,

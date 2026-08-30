@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BrandMark, Field, GhostButton, PrimaryButton, Screen, Txt } from '@/components/ui';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore } from '@/store/useStore';
@@ -23,6 +24,13 @@ export default function Onboarding() {
   const addSource = useStore((s) => s.addSource);
   const sources = useStore((s) => s.sources);
   const liveExt = useStore((s) => s.settings.liveExt);
+  const languageChosen = useStore((s) => s.settings.languageChosen);
+
+  // FIRST RUN ONLY: ask the language on its own screen, BEFORE the form. It used
+  // to sit as a chip row on top of the form; on TV that put focusable chips above
+  // the text fields and the cursor kept jumping back up to them. One screen, one
+  // decision — and the form is then already in the user's language.
+  const [langStep, setLangStep] = useState(!editId && !languageChosen && sources.length === 0);
 
   const [mode, setMode] = useState<Mode>('xtream');
   const [name, setName] = useState('');
@@ -119,6 +127,23 @@ export default function Onboarding() {
     }
   }
 
+  if (langStep) {
+    return (
+      <Screen>
+        <View style={styles.langWrap}>
+          <BrandMark size={34} />
+          <Txt variant="h2" style={{ marginTop: spacing.lg }}>
+            {t('ob.langTitle')}
+          </Txt>
+          <Txt variant="small" color={colors.textMuted} style={{ marginTop: 6, marginBottom: spacing.lg }}>
+            {t('ob.langHint')}
+          </Txt>
+          <LanguagePicker big onPicked={() => setLangStep(false)} />
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <FocusScrollView contentContainerStyle={styles.wrap}>
@@ -132,11 +157,10 @@ export default function Onboarding() {
           {t('ob.tagline')}
         </Txt>
 
-        {/* NOTE: the language picker was removed from onboarding on the box. On Android
-            TV its focusable chips sat at the very top of a text-entry screen, so when a
-            Field blurs to force the on-screen keyboard, native focus fell back to the
-            first focusable (the language chips) — the cursor jumped up to "language" and
-            typing broke. Language is set in Settings instead. (Phone build keeps it.) */}
+        {/* NOTE: no language picker HERE. On Android TV its focusable chips sat at the
+            very top of a text-entry screen and the cursor kept jumping back up to them,
+            so the choice moved to its own first-run step above (and to Settings). Never
+            put focusables above the fields on a form the user types into. */}
 
         {/* One plain line so the first choice is obvious, not a blind guess. */}
         <Txt variant="small" color={colors.textMuted} style={{ marginBottom: spacing.sm }}>
@@ -148,7 +172,7 @@ export default function Onboarding() {
         </View>
 
         <View style={styles.kbHint}>
-          <Ionicons name="phone-portrait-outline" size={18} color={colors.accent} />
+          <Ionicons name="keypad-outline" size={18} color={colors.accent} />
           <Txt variant="tiny" color={colors.textMuted} style={{ flex: 1 }}>
             {t('ob.typeHint')}
           </Txt>
@@ -238,6 +262,7 @@ function ModeChip({ label, icon, active, onPress }: { label: string; icon: any; 
 
 const styles = StyleSheet.create({
   wrap: { padding: spacing.xl, maxWidth: 640, width: '100%', alignSelf: 'center' },
+  langWrap: { flex: 1, justifyContent: 'center', padding: spacing.xl, maxWidth: 640, width: '100%', alignSelf: 'center' },
   tabs: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   kbHint: {
     flexDirection: 'row',
