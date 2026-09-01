@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, TVFocusGuideView, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusList, useListScroll } from '@/tv/FocusList';
@@ -10,6 +10,7 @@ import { colors, radius, spacing } from '@/theme/tokens';
 import type { Category, MediaItem, MediaKind, ProgressEntry } from '@/lib/types';
 import { MediaGrid } from './Rail';
 import { ContinueGrid } from './ContinueRail';
+import { LivePreview, setPreviewChannel } from './LivePreview';
 import { Empty, Txt } from './ui';
 
 // Box (D-pad) version of the phone's folder-tile browser: categories are big
@@ -19,7 +20,22 @@ import { Empty, Txt } from './ui';
 // Focusable rings, FocusList scroll-follow (R3), first-item auto-focus, and the
 // hardware BACK button closes an open folder instead of leaving the tab.
 
-const TILE_H = 128;
+// Wide, low tiles — two per row on a TV — with a round icon badge and a big
+// label beside it: the set-top-box arrangement (Duplex, and every launcher on a
+// TV) that reads from across the room. A dense grid of small squares makes you
+// lean in and read; this one you recognise at a glance.
+const TILE_H = 104;
+const TILE_MIN_W = 300;
+
+/**
+ * Where you were, per section — survives leaving for the player AND switching
+ * tab (which unmounts the screen), so coming back never dumps you at the top of
+ * a 2000-channel list again. Module-level on purpose: it is a UI position, not
+ * user data, so it lives for the app session and is never persisted.
+ */
+type Spot = { cat: string | null; lastCat: string | null; itemId: string | null };
+const spots = new Map<MediaKind, Spot>();
+const spotOf = (k: MediaKind): Spot => spots.get(k) ?? { cat: null, lastCat: null, itemId: null };
 
 /** A friendly icon guessed from the category name (recognise, don't read). */
 function iconForCategory(name: string): any {
@@ -74,21 +90,19 @@ function FolderTile({
       focusStyle={styles.folderFocus}
     >
       {() => (
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          {pinned ? (
-            <View style={styles.pinBadge}>
-              <Ionicons name="star" size={14} color={colors.accent} />
-            </View>
-          ) : null}
+        <View style={styles.folderRow}>
           <View style={styles.folderIcon}>
-            <Ionicons name={icon} size={26} color={colors.accent} />
+            <Ionicons name={icon} size={30} color={colors.accent} />
           </View>
-          <Txt variant="body" numberOfLines={2} style={{ fontWeight: '700', marginTop: spacing.sm }}>
-            {name}
-          </Txt>
-          <Txt variant="small" color={colors.textMuted} style={{ marginTop: 2 }}>
-            {t(countKey, { n: count })}
-          </Txt>
+          <View style={{ flex: 1 }}>
+            <Txt variant="h3" numberOfLines={1} style={{ fontWeight: '800' }}>
+              {name}
+            </Txt>
+            <Txt variant="small" color={colors.textMuted} style={{ marginTop: 2 }}>
+              {t(countKey, { n: count })}
+            </Txt>
+          </View>
+          {pinned ? <Ionicons name="star" size={18} color={colors.accent} /> : null}
         </View>
       )}
     </Focusable>
@@ -170,8 +184,44 @@ export function Browser({
     [progress, contKind],
   );
 
-  // Which folder is open. null = show the folder grid.
-  const [openCat, setOpenCat] = useState<string | null>(null);
+  // Which folder is open. null = show the folder grid. Restored from where the
+  // user left this section.
+  const [openCat, setOpenCat] = useState<string | null>(() => spotOf(kind).cat);
+  // The card to land on when the grid mounts. Frozen at mount on purpose: if it
+  // tracked the live focus, every D-pad step would change a card's
+  // hasTVPreferredFocus and could fight the native focus.
+  const [restoreId, setRestoreId] = useState<string | null>(() => spotOf(kind).itemId);
+
+  const livePreview = useStore((s) => s.settings.livePreview);
+  const browseLayout = useStore((s) => s.settings.browseLayout);
+  const updateSettings = useStore((s) => s.updateSettings);
+
+  const openFolder = (id: string) => {
+    const prev = spotOf(kind);
+    // The remembered card belongs to the remembered folder — only reuse it when
+    // re-entering that same folder, otherwise start at the top.
+    const keep = prev.cat === id || prev.lastCat === id ? prev.itemId : null;
+    setRestoreId(keep);
+    spots.set(kind, { cat: id, lastCat: id, itemId: keep });
+    setPreviewChannel(null);
+    setOpenCat(id);
+  };
+  const closeFolder = () => {
+    const prev = spotOf(kind);
+    spots.set(kind, { ...prev, cat: null });
+    setPreviewChannel(null);
+    setOpenCat(null);
+  };
+  // Not React state: re-rendering the Browser on every D-pad step would
+  // re-render the whole grid. Only the preview panel listens to this.
+  const onCardFocus = (it: MediaItem) => {
+    const prev = spotOf(kind);
+    spots.set(kind, { cat: prev.cat, lastCat: prev.lastCat, itemId: it.id });
+    if (kind === 'live') setPreviewChannel(it);
+  };
+
+  // Stop the preview stream when the section unmounts (tab switch).
+  useEffect(() => () => setPreviewChannel(null), []);
 
   // Hardware BACK closes an open folder (back to the folder grid) instead of
   // leaving the tab. Registered ONLY while a folder is open, and — because
@@ -181,7 +231,7 @@ export function Browser({
   useEffect(() => {
     if (!openCat) return;
     const onBack = () => {
-      setOpenCat(null);
+      closeFolder();
       return true;
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
@@ -191,9 +241,9 @@ export function Browser({
   // If the list refreshes and the open folder id disappears, fall back so the
   // grid never ends up mysteriously empty.
   useEffect(() => {
-    if (openCat === 'fav' && !favItems.length) setOpenCat(null);
-    else if (openCat === 'recent' && !recentItems.length) setOpenCat(null);
-    else if (openCat === 'continue' && !continueEntries.length) setOpenCat(null);
+    if (openCat === 'fav' && !favItems.length) closeFolder();
+    else if (openCat === 'recent' && !recentItems.length) closeFolder();
+    else if (openCat === 'continue' && !continueEntries.length) closeFolder();
     else if (
       openCat &&
       openCat !== 'all' &&
@@ -202,7 +252,7 @@ export function Browser({
       openCat !== 'continue' &&
       !cats.some((c) => c.id === openCat)
     )
-      setOpenCat(null);
+      closeFolder();
   }, [cats, openCat, favItems.length, recentItems.length, continueEntries.length]);
 
   if (!items.length) {
@@ -247,29 +297,68 @@ export function Browser({
               : cats.find((c) => c.id === openCat)?.name ?? title;
     const channels = isCont ? [] : filteredBy(openCat);
     const count = isCont ? continueEntries.length : channels.length;
+    const asList = browseLayout === 'list';
     const header = (
       <View>
-        <Focusable onSelect={() => setOpenCat(null)} style={styles.backRow} focusStyle={styles.backRowFocus}>
-          {(f) => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="chevron-back" size={22} color={colors.accent} />
-              <Txt variant="small" color={f ? colors.text : colors.accent} style={{ fontWeight: '700' }}>
-                {t('br.backToFolders')}
-              </Txt>
-            </View>
-          )}
-        </Focusable>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Focusable onSelect={closeFolder} style={styles.backRow} focusStyle={styles.backRowFocus}>
+            {(f) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="chevron-back" size={22} color={colors.accent} />
+                <Txt variant="small" color={f ? colors.text : colors.accent} style={{ fontWeight: '700' }}>
+                  {t('br.backToFolders')}
+                </Txt>
+              </View>
+            )}
+          </Focusable>
+          {/* One button, and it SHOWS the layout you are about to get. */}
+          <Focusable
+            onSelect={() => updateSettings({ browseLayout: asList ? 'grid' : 'list' })}
+            style={styles.backRow}
+            focusStyle={styles.backRowFocus}
+          >
+            {(f) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name={asList ? 'grid' : 'list'} size={20} color={colors.accent} />
+                <Txt variant="small" color={f ? colors.text : colors.accent} style={{ fontWeight: '700' }}>
+                  {asList ? t('br.asGrid') : t('br.asList')}
+                </Txt>
+              </View>
+            )}
+          </Focusable>
+        </View>
         <Txt variant="h2" style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
           {folderName} <Txt variant="small" color={colors.textFaint}>{`· ${t(countKey, { n: count })}`}</Txt>
         </Txt>
       </View>
     );
+    const grid = (
+      <MediaGrid
+        items={channels}
+        onSelect={onSelect}
+        variant={variant}
+        header={header}
+        autoFocusFirst
+        focusItemId={restoreId}
+        onItemFocus={onCardFocus}
+        layout={browseLayout}
+      />
+    );
+    // Live only: a small window beside the grid shows the focused channel, so you
+    // can check what is on without leaving the list. Films/series would gain
+    // nothing from it and would just cost a second stream.
+    const withPreview = kind === 'live' && livePreview && !isCont;
     return (
       <TVFocusGuideView autoFocus style={{ flex: 1 }}>
         {isCont ? (
           <ContinueGrid entries={continueEntries} onSelect={(e) => onResume?.(e)} header={header} />
+        ) : withPreview ? (
+          <View style={{ flex: 1, flexDirection: 'row' }}>
+            <View style={{ flex: 1 }}>{grid}</View>
+            <LivePreview />
+          </View>
         ) : (
-          <MediaGrid items={channels} onSelect={onSelect} variant={variant} header={header} autoFocusFirst />
+          grid
         )}
       </TVFocusGuideView>
     );
@@ -289,7 +378,8 @@ export function Browser({
       onTogglePin={togglePin}
       allLabel={allLabel}
       countKey={countKey}
-      onOpen={setOpenCat}
+      focusId={spotOf(kind).lastCat}
+      onOpen={openFolder}
     />
   );
 }
@@ -307,6 +397,7 @@ function FolderGrid({
   onTogglePin,
   allLabel,
   countKey,
+  focusId,
   onOpen,
 }: {
   title: string;
@@ -320,6 +411,8 @@ function FolderGrid({
   onTogglePin: (id: string) => void;
   allLabel: string;
   countKey: string;
+  /** Land on the folder the user last opened instead of the first tile. */
+  focusId?: string | null;
   onOpen: (id: string) => void;
 }) {
   const t = useT();
@@ -329,7 +422,9 @@ function FolderGrid({
   const pad = spacing.lg;
   const gap = spacing.md;
   const usable = (w || 960) - pad * 2;
-  const cols = Math.max(2, Math.floor((usable + gap) / (210 + gap)));
+  // Three wide tiles per row, and never more: past that they shrink back into
+  // the dense little grid this replaced.
+  const cols = Math.max(1, Math.min(3, Math.floor((usable + gap) / (TILE_MIN_W + gap))));
   const tileW = Math.floor((usable - gap * (cols - 1)) / cols);
   const rowH = TILE_H + gap;
   const PAD_TOP = spacing.sm;
@@ -343,6 +438,16 @@ function FolderGrid({
     { id: 'all', name: allLabel, count: total, icon: 'apps' as any },
     ...cats.map((c) => ({ id: c.id, name: c.name, count: counts.get(c.id) ?? 0, icon: iconForCategory(c.name) })),
   ];
+
+  const focusIdx = focusId ? tiles.findIndex((x) => x.id === focusId) : -1;
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !w || focusIdx <= 0) return;
+    restored.current = true;
+    const row = Math.floor(focusIdx / cols);
+    s.ref.current?.scrollToOffset({ offset: Math.max(0, PAD_TOP + (row - 1) * rowH), animated: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [w, focusIdx, cols]);
 
   const header = (
     <View style={styles.folderHeader}>
@@ -384,7 +489,7 @@ function FolderGrid({
             icon={item.icon}
             width={tileW}
             pinned={!special && pins.includes(item.id)}
-            autoFocus={index === 0}
+            autoFocus={focusIdx >= 0 ? index === focusIdx : index === 0}
             onPress={() => onOpen(item.id)}
             onLongSelect={special ? undefined : () => onTogglePin(item.id)}
             onFocus={() => s.reveal(PAD_TOP + Math.floor(index / cols) * rowH, rowH)}
@@ -401,20 +506,20 @@ const styles = StyleSheet.create({
     height: TILE_H,
     backgroundColor: colors.bgElevated,
     borderRadius: radius.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
   },
+  folderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   // Color-only focus ring (same border width) — never changes layout, so no
   // Fabric re-layout / focus loop. See box-app-rules.
   folderFocus: { borderColor: colors.borderFocus, backgroundColor: colors.surfaceHi },
   folderPinned: { borderColor: colors.accent },
-  pinBadge: { position: 'absolute', top: 0, right: 0 },
   folderIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.surfaceHi,
     alignItems: 'center',
     justifyContent: 'center',

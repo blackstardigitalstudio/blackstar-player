@@ -302,7 +302,10 @@ export async function loadXtream(c: SourceConfig, liveExt = 'ts'): Promise<Loade
     id: `series:${x.series_id}`,
     kind: 'series',
     name: String(x.name || 'Senza nome'),
-    logo: x.cover || x.cover_big || x.stream_icon || undefined,
+    // stream_icon FIRST, like movies: it is the small artwork. `cover_big` is a
+    // full-resolution poster and the grid only ever draws it 144px wide — asking
+    // for the big one made Serie crawl on a box. Kept as a fallback.
+    logo: x.stream_icon || x.cover || x.cover_big || undefined,
     seriesId: String(x.series_id),
     plot: x.plot || undefined,
     rating: x.rating || undefined,

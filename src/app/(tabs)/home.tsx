@@ -6,7 +6,7 @@ import { Alert, BackHandler, StyleSheet, View } from 'react-native';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { ContinueRail } from '@/components/ContinueRail';
 import { Rail } from '@/components/Rail';
-import { Empty, GhostButton, Spinner, Txt } from '@/components/ui';
+import { Empty, Spinner, Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
@@ -20,28 +20,6 @@ import { colors, radius, spacing } from '@/theme/tokens';
 
 // Fires the auto-start-last-channel at most once per app launch (module scope).
 let autoStartedThisLaunch = false;
-
-function Folder({ label, icon, color, count, onPress }: { label: string; icon: any; color: string; count?: number; onPress: () => void }) {
-  return (
-    <Focusable onSelect={onPress} style={styles.folder} focusStyle={styles.folderFocus}>
-      {(f) => (
-        <LinearGradient colors={[color + '33', colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.folderInner, f && { borderColor: color }]}>
-          <Ionicons name={icon} size={34} color={color} />
-          <Txt variant="h3" numberOfLines={1} color={colors.text} style={{ fontWeight: '800' }}>
-            {label}
-          </Txt>
-          {count ? (
-            <View style={styles.folderCount}>
-              <Txt variant="tiny" color={colors.textMuted}>
-                {count}
-              </Txt>
-            </View>
-          ) : null}
-        </LinearGradient>
-      )}
-    </Focusable>
-  );
-}
 
 export default function Home() {
   const t = useT();
@@ -94,17 +72,6 @@ export default function Home() {
     [taste, pool, watchedIds],
   );
 
-  const folders = useMemo(
-    () =>
-      [
-        { key: 'live', label: t('nav.live'), icon: 'tv', color: colors.live, count: content.live.length, path: '/(tabs)/live' },
-        { key: 'movies', label: t('nav.movies'), icon: 'film', color: colors.primary, count: content.movies.length, path: '/(tabs)/movies' },
-        { key: 'series', label: t('nav.series'), icon: 'albums', color: colors.accent, count: content.series.length, path: '/(tabs)/series' },
-        { key: 'search', label: t('nav.search'), icon: 'search', color: colors.success, count: 0, path: '/(tabs)/search' },
-      ].filter((f) => f.key === 'search' || f.count > 0),
-    [content, t],
-  );
-
   // Number-bar zapping (TV).
   const [typed, setTyped] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,9 +119,12 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* No "Aggiorna" button up here any more: it reloaded the channel list (which
+          the app already refreshes on its own, and Impostazioni → "Aggiorna lista
+          ora" does on demand, with a confirmation), it gave no feedback, and being
+          the first focusable it stole the opening focus from the content. */}
       <View style={styles.header}>
         <Txt variant="h2" numberOfLines={1}>{bannerText || 'Blackstar'}</Txt>
-        <GhostButton label={t('common.refresh')} icon="refresh" onPress={() => useStore.getState().refresh(true)} />
       </View>
 
       {loading && !hasAny ? (
@@ -173,13 +143,10 @@ export default function Home() {
         />
       ) : (
         <FocusScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-          {/* Big category folders */}
-          <View style={styles.folders}>
-            {folders.map((fld) => (
-              <Folder key={fld.key} label={fld.label} icon={fld.icon} color={fld.color} count={fld.count || undefined} onPress={() => router.replace(fld.path as any)} />
-            ))}
-          </View>
-
+          {/* No section tiles here on purpose: the side menu already switches
+              between Live / Film / Serie / Cerca, so repeating them as big tiles
+              was the same choice twice, right where the eye lands first. Home is
+              now what you were watching and what to watch next. */}
           {/* Recommendations (kept) */}
           <ContinueRail
             entries={continueList}
@@ -216,27 +183,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
-  },
-  folders: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  folder: { flexGrow: 1, flexBasis: 150, borderRadius: radius.lg },
-  folderFocus: {},
-  folderInner: {
-    height: 104,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    padding: spacing.md,
-    justifyContent: 'center',
-    gap: 6,
-  },
-  folderCount: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
   },
   zap: {
     position: 'absolute',

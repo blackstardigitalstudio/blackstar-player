@@ -229,6 +229,12 @@ export default function Settings() {
           onPress={() => s.updateSettings({ liveExt: s.settings.liveExt === 'ts' ? 'm3u8' : 'ts' })}
         />
         <Row
+          icon="eye"
+          label={t('set.livePreview')}
+          value={s.settings.livePreview ? t('common.on') : t('common.off')}
+          onPress={() => s.updateSettings({ livePreview: !s.settings.livePreview })}
+        />
+        <Row
           icon="shield-checkmark"
           label={t('set.survival')}
           value={s.settings.survivalMode ? t('common.on') : t('common.off')}

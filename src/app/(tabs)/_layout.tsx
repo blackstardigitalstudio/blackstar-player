@@ -2,6 +2,7 @@ import { Slot, usePathname, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { BackHandler, TVFocusGuideView, View } from 'react-native';
 import { NavRail } from '@/components/NavRail';
+import { RemoteHints } from '@/components/RemoteHints';
 import { colors } from '@/theme/tokens';
 
 export default function TabsLayout() {
@@ -28,13 +29,18 @@ export default function TabsLayout() {
     // TV overscan safe margin: cheap TVs crop the outer ~5%, so keep all focusable
     // content (NavRail icons on the left, grid cards on the right, top row) off the
     // physical panel edges. One wrapper protects every tab screen.
-    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg, paddingVertical: 18, paddingHorizontal: 24 }}>
-      <NavRail />
-      {/* autoFocus: pressing RIGHT from the side menu lands the D-pad on a REAL
-          element in the content (and remembers where you were). */}
-      <TVFocusGuideView autoFocus style={{ flex: 1 }}>
-        <Slot />
-      </TVFocusGuideView>
+    <View style={{ flex: 1, backgroundColor: colors.bg, paddingVertical: 18, paddingHorizontal: 24 }}>
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <NavRail />
+        {/* autoFocus: pressing RIGHT from the side menu lands the D-pad on a REAL
+            element in the content (and remembers where you were). */}
+        <TVFocusGuideView autoFocus style={{ flex: 1 }}>
+          <Slot />
+        </TVFocusGuideView>
+      </View>
+      {/* What the remote does here, spelled out — plus the time, like every
+          set-top box app worth using. Never focusable. */}
+      <RemoteHints pathname={pathname} />
     </View>
   );
 }

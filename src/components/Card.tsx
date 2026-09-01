@@ -15,6 +15,13 @@ export const POSTER_H = POSTER_W;
 export const TILE_W = POSTER_W;
 export const TILE_H = POSTER_W;
 
+// The thumbnail is drawn at 86% of the square, in REAL PIXELS. Percentages made
+// expo-image wait for layout before it knew the target size, so a 1000x1500
+// Xtream poster could be decoded at full size for a 144px box — a hundred of
+// those on screen starved the JS thread and the focus ring lagged behind the
+// remote. An explicit size lets it downsample straight away.
+const IMG_PX = Math.round(POSTER_W * 0.86);
+
 // FIXED card heights so grid rows are deterministic (exact scroll math, no drift).
 // Rule: explicit line height + fixed label box. Poster label = 2 lines, tile = 1.
 const LABEL_LINE = Math.round(font.small * 1.28);
@@ -44,9 +51,12 @@ function Square({ item, focused, fallbackIcon }: { item: MediaItem; focused: boo
           source={{ uri: item.logo }}
           style={styles.img}
           contentFit="contain"
-          transition={120}
+          // No cross-fade: in a grid it means one running animation per visible
+          // card, for a fade nobody looks at while moving the D-pad.
+          transition={0}
           recyclingKey={item.id}
           cachePolicy="memory-disk"
+          priority="low"
         />
       ) : (
         <Fallback name={item.name} icon={fallbackIcon} />
@@ -71,6 +81,52 @@ export function PosterCard({ item, focused }: { item: MediaItem; focused: boolea
         <Txt variant="small" numberOfLines={2} style={{ lineHeight: LABEL_LINE, color: focused ? colors.text : colors.textMuted }}>
           {item.name}
         </Txt>
+      </View>
+    </View>
+  );
+}
+
+// --- LIST layout ------------------------------------------------------------
+// One title per row, read left to right like a channel list on a set-top box.
+// Fixed height, same rule as the cards: the grid maths must stay exact.
+export const ROW_H = 72;
+const ROW_IMG = 52;
+
+export function ListRow({ item, focused }: { item: MediaItem; focused: boolean }) {
+  const showNumbers = useStore((s) => s.settings.showChannelNumbers);
+  const number = showNumbers && typeof item.number === 'number' ? item.number : null;
+  const sub = [item.year, item.rating ? `★ ${item.rating}` : null, item.categoryName].filter(Boolean).join('  ·  ');
+  return (
+    <View style={[styles.row, focused && styles.rowFocus]}>
+      {number !== null ? (
+        <Txt variant="small" color={focused ? colors.accent : colors.textFaint} style={styles.rowNum}>
+          {number}
+        </Txt>
+      ) : null}
+      <View style={styles.rowThumb}>
+        {item.logo ? (
+          <Image
+            source={{ uri: item.logo }}
+            style={{ width: ROW_IMG - 8, height: ROW_IMG - 8 }}
+            contentFit="contain"
+            transition={0}
+            recyclingKey={item.id}
+            cachePolicy="memory-disk"
+            priority="low"
+          />
+        ) : (
+          <Fallback name={item.name} icon={item.kind === 'live' ? 'tv' : item.kind === 'series' ? 'albums' : 'film'} />
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Txt variant="body" numberOfLines={1} style={{ color: focused ? colors.text : colors.textMuted, fontWeight: '600' }}>
+          {item.name}
+        </Txt>
+        {sub ? (
+          <Txt variant="tiny" color={colors.textFaint} numberOfLines={1}>
+            {sub}
+          </Txt>
+        ) : null}
       </View>
     </View>
   );
@@ -110,14 +166,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbFocus: {
-    borderColor: colors.borderFocus,
-    shadowColor: colors.accent,
-    shadowOpacity: 0.9,
-    shadowRadius: 16,
-    elevation: 14,
+  // Color-only focus ring — box-app-rules R2. The old ring added elevation +
+  // a shadow, which on Android promotes the card to its own render layer and
+  // recomputes a shadow on every focus change: exactly the per-keypress cost you
+  // feel as "the selection arrives late" on a grid of heavy posters.
+  thumbFocus: { borderColor: colors.borderFocus, backgroundColor: colors.surfaceHi },
+  img: { width: IMG_PX, height: IMG_PX },
+  row: {
+    height: ROW_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.bgElevated,
   },
-  img: { width: '86%', height: '86%' },
+  rowFocus: { borderColor: colors.borderFocus, backgroundColor: colors.surfaceHi },
+  rowNum: { width: 46, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  rowThumb: {
+    width: ROW_IMG,
+    height: ROW_IMG,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badge: {
     position: 'absolute',
     top: 6,

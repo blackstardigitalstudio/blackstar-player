@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusLayer } from '@/tv/RemoteProvider';
 import { useT } from '@/i18n';
@@ -21,6 +21,12 @@ export function UpdateGate() {
   // Shown while a MANUAL "Cerca aggiornamenti" is checking, so the button gives
   // immediate visible feedback instead of doing nothing for up to 8 seconds.
   const [checkingUi, setCheckingUi] = useState(false);
+  // Result of a manual check when there is nothing to install. Android's system
+  // Alert was used here before, and on a TV it is the wrong tool: it is a native
+  // dialog outside the app's FocusLayer, so on a box it could show up with no
+  // D-pad focus at all — pressing "Cerca aggiornamenti" looked like it did
+  // nothing. Every popup in this app is its own modal (box-app-rules R8).
+  const [notice, setNotice] = useState<string | null>(null);
   const checking = useRef(false);
 
   const run = async (manual: boolean) => {
@@ -36,11 +42,11 @@ export function UpdateGate() {
         setProgress(0);
         setInfo(u);
       } else if (manual) {
-        Alert.alert('Blackstar Player', t('upd.upToDate'));
+        setNotice(t('upd.upToDate'));
       }
     } catch {
       // Only surface a failure on a manual check; the silent startup check stays quiet.
-      if (manual) Alert.alert('Blackstar Player', t('upd.checkFailed'));
+      if (manual) setNotice(t('upd.checkFailed'));
     } finally {
       checking.current = false;
       setCheckingUi(false);
@@ -84,6 +90,28 @@ export function UpdateGate() {
             <Txt variant="body">{t('upd.checking')}</Txt>
           </View>
         </View>
+      </Modal>
+    );
+  }
+
+  // Manual check finished with nothing to install (or it failed) → say so, with
+  // a button the remote can actually reach.
+  if (!info && notice) {
+    return (
+      <Modal visible transparent animationType="fade" onRequestClose={() => setNotice(null)}>
+        <FocusLayer>
+          <View style={styles.backdrop}>
+            <View style={styles.card}>
+              <Txt variant="h3">{t('set.checkUpdate')}</Txt>
+              <Txt variant="small" color={colors.textMuted} style={{ marginTop: 6 }}>
+                {notice}
+              </Txt>
+              <View style={styles.row}>
+                <PrimaryButton label={t('common.ok')} icon="checkmark" onPress={() => setNotice(null)} autoFocus />
+              </View>
+            </View>
+          </View>
+        </FocusLayer>
       </Modal>
     );
   }

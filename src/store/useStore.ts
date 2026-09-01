@@ -25,6 +25,10 @@ export interface Settings {
   autoStartLastChannel: boolean;
   survivalMode: boolean;
   aspectMode: 'contain' | 'cover' | 'fill';
+  /** Small live window beside the channel grid, previewing the focused channel. */
+  livePreview: boolean;
+  /** How a section lists its titles: squares side by side, or one per row. */
+  browseLayout: 'grid' | 'list';
   showChannelNumbers: boolean;
   bannerText: string;
   autoCleanupHours: number;
@@ -53,6 +57,8 @@ const DEFAULT_SETTINGS: Settings = {
   autoStartLastChannel: true,
   survivalMode: true,
   aspectMode: 'contain',
+  livePreview: true,
+  browseLayout: 'grid',
   showChannelNumbers: true,
   bannerText: 'Blackstar Player',
   autoCleanupHours: 6,
