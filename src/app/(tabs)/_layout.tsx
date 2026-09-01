@@ -1,5 +1,5 @@
-import { Slot, usePathname, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { Slot, useFocusEffect, usePathname, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { BackHandler, TVFocusGuideView, View } from 'react-native';
 import { NavRail } from '@/components/NavRail';
 import { RemoteHints } from '@/components/RemoteHints';
@@ -13,17 +13,25 @@ export default function TabsLayout() {
   // returns to Home; on Home it defers to Home's own handler (exit confirmation)
   // or the OS. This is the fix for "mi butta fuori": before, BACK on Live/Film/
   // Impostazioni popped the single (tabs) entry and killed the app.
-  useEffect(() => {
-    const onBack = () => {
-      if (!pathname.includes('home')) {
-        router.replace('/(tabs)/home');
-        return true;
-      }
-      return false;
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
-    return () => sub.remove();
-  }, [pathname, router]);
+  // useFocusEffect, NOT useEffect: a BackHandler listener is GLOBAL, it does not
+  // care which screen is on top. Registered with useEffect this one stayed alive
+  // while the Player was open, so BACK from a full-screen channel was swallowed
+  // here and turned into "go Home" instead of closing the video — you had to
+  // press it twice and landed on Home with the exit prompt. Now it only listens
+  // while the tabs are actually the visible screen.
+  useFocusEffect(
+    useCallback(() => {
+      const onBack = () => {
+        if (!pathname.includes('home')) {
+          router.replace('/(tabs)/home');
+          return true;
+        }
+        return false;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+      return () => sub.remove();
+    }, [pathname, router]),
+  );
 
   return (
     // TV overscan safe margin: cheap TVs crop the outer ~5%, so keep all focusable

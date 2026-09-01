@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, TVFocusGuideView, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Focusable } from '@/tv/Focusable';
 import { FocusList, useListScroll } from '@/tv/FocusList';
 import { useT } from '@/i18n';
@@ -235,21 +236,28 @@ export function Browser({
   // Browser mounts under the tabs layout — this listener runs BEFORE the
   // layout's "go Home" handler, so it wins. Closed folder → no listener → the
   // layout handles BACK as before.
-  useEffect(() => {
-    if (!openCat && !query) return;
-    const onBack = () => {
-      // Peel one layer at a time: search results → folder → (the tabs layout
-      // takes over and goes Home).
-      if (query) {
-        setQuery('');
+  // Same trap as the tabs layout: a BackHandler is global. With a plain useEffect
+  // this listener kept running while the Player was on top and ate the first
+  // BACK press (silently closing the folder behind the video). Only listen while
+  // this section is the screen you are actually looking at.
+  useFocusEffect(
+    useCallback(() => {
+      if (!openCat && !query) return;
+      const onBack = () => {
+        // Peel one layer at a time: search results → folder → (the tabs layout
+        // takes over and goes Home).
+        if (query) {
+          setQuery('');
+          return true;
+        }
+        closeFolder();
         return true;
-      }
-      closeFolder();
-      return true;
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
-    return () => sub.remove();
-  }, [openCat, query]);
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [openCat, query]),
+  );
 
   // If the list refreshes and the open folder id disappears, fall back so the
   // grid never ends up mysteriously empty.

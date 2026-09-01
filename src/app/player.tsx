@@ -87,6 +87,16 @@ export default function Player() {
   const pendingSeekRef = useRef<number | null>(null);
 
   const player = useVideoPlayer(cur.candidates[0] ? buildSource(cur.candidates[0]) : null, (p) => {
+    // IPTV buffering. The defaults are tuned for a well-behaved CDN: 20s ahead,
+    // and playback RESUMES after a stall with only 2s buffered. On a live IPTV
+    // feed that is the recipe for the freeze → burst of frames → freeze loop:
+    // the player restarts on an almost-empty buffer and runs dry again seconds
+    // later. Fill much further ahead, and demand a real cushion before resuming.
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 50,
+      minBufferForPlayback: 5,
+      prioritizeTimeOverSizeThreshold: true,
+    };
     p.play();
   });
 
