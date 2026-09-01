@@ -40,6 +40,15 @@ type Spot = { cat: string | null; lastCat: string | null; itemId: string | null 
 const spots = new Map<MediaKind, Spot>();
 const spotOf = (k: MediaKind): Spot => spots.get(k) ?? { cat: null, lastCat: null, itemId: null };
 
+/**
+ * Open a section with one of its folders ALREADY open. Home's shortcuts use it:
+ * they set the spot and then navigate, and the Browser mounts straight into that
+ * folder — no extra screen, no second choice for the user to make.
+ */
+export function presetFolder(kind: MediaKind, cat: string) {
+  spots.set(kind, { cat, lastCat: cat, itemId: null });
+}
+
 /** A friendly icon guessed from the category name (recognise, don't read). */
 function iconForCategory(name: string): any {
   const n = name.toLowerCase();

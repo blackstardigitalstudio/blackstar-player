@@ -7,6 +7,7 @@ import { FocusScrollView } from '@/tv/FocusScroll';
 import { ContinueRail } from '@/components/ContinueRail';
 import { Rail } from '@/components/Rail';
 import { Empty, Spinner, Txt } from '@/components/ui';
+import { presetFolder } from '@/components/Browser';
 import { Focusable } from '@/tv/Focusable';
 import { useKeyHandler } from '@/tv/RemoteProvider';
 import { useStore } from '@/store/useStore';
@@ -20,6 +21,53 @@ import { colors, radius, spacing } from '@/theme/tokens';
 
 // Fires the auto-start-last-channel at most once per app launch (module scope).
 let autoStartedThisLaunch = false;
+
+const TILE_H = 104;
+
+/**
+ * Set-top-box tile: wide and low, round icon badge, big label — the arrangement
+ * you can read from the sofa instead of leaning in. Same language as the folder
+ * tiles inside a section, so the whole app looks like one app.
+ */
+function HomeTile({ label, icon, count, autoFocus, onPress }: { label: string; icon: any; count?: string; autoFocus?: boolean; onPress: () => void }) {
+  return (
+    <Focusable onSelect={onPress} autoFocus={autoFocus} style={styles.tile} focusStyle={styles.tileFocus}>
+      {() => (
+        <View style={styles.tileRow}>
+          <View style={styles.tileIcon}>
+            <Ionicons name={icon} size={30} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Txt variant="h3" numberOfLines={1} style={{ fontWeight: '800' }}>
+              {label}
+            </Txt>
+            {count ? (
+              <Txt variant="small" color={colors.textMuted} style={{ marginTop: 2 }}>
+                {count}
+              </Txt>
+            ) : null}
+          </View>
+        </View>
+      )}
+    </Focusable>
+  );
+}
+
+/** Right-hand shortcut: one press straight to the thing, no menu in between. */
+function Shortcut({ label, icon, onPress }: { label: string; icon: any; onPress: () => void }) {
+  return (
+    <Focusable onSelect={onPress} style={styles.shortcut} focusStyle={styles.tileFocus}>
+      {(f) => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Ionicons name={icon} size={22} color={colors.accent} />
+          <Txt variant="body" numberOfLines={1} color={f ? colors.text : colors.textMuted} style={{ fontWeight: '700', flex: 1 }}>
+            {label}
+          </Txt>
+        </View>
+      )}
+    </Focusable>
+  );
+}
 
 export default function Home() {
   const t = useT();
@@ -102,6 +150,39 @@ export default function Home() {
     [typed, jumpToNumber],
   );
 
+  // Duplex-style top: the sections as wide tiles on the left, and on the right
+  // the three shortcuts the side menu CANNOT give you — resume, favourites,
+  // recently watched. The tiles duplicate the side menu on purpose here: on a
+  // 10-foot screen the first thing the eye lands on should be a target you can
+  // hit, not a narrow icon strip.
+  const sections = useMemo(
+    () =>
+      [
+        { key: 'live', label: t('nav.live'), icon: 'tv' as const, n: content.live.length, countKey: 'br.channelsCount', path: '/(tabs)/live' },
+        { key: 'movies', label: t('nav.movies'), icon: 'film' as const, n: content.movies.length, countKey: 'br.moviesCount', path: '/(tabs)/movies' },
+        { key: 'series', label: t('nav.series'), icon: 'albums' as const, n: content.series.length, countKey: 'br.seriesCount', path: '/(tabs)/series' },
+        { key: 'search', label: t('nav.search'), icon: 'search' as const, n: -1, countKey: '', path: '/(tabs)/search' },
+      ].filter((sec) => sec.n !== 0),
+    [content, t],
+  );
+
+  /** Section that actually holds the most of something, so a shortcut never
+   *  opens an empty folder. */
+  const richest = (ids: Set<string>): { kind: MediaItem['kind']; path: string } => {
+    const count = (list: MediaItem[]) => list.filter((i) => ids.has(i.id)).length;
+    const opts = [
+      { kind: 'live' as const, path: '/(tabs)/live', n: count(content.live) },
+      { kind: 'movie' as const, path: '/(tabs)/movies', n: count(content.movies) },
+      { kind: 'series' as const, path: '/(tabs)/series', n: count(content.series) },
+    ].sort((a, b) => b.n - a.n);
+    return opts[0];
+  };
+  const openFolderShortcut = (ids: Set<string>, cat: string) => {
+    const target = richest(ids);
+    presetFolder(target.kind, cat);
+    router.replace(target.path as any);
+  };
+
   const go = (item: MediaItem) => play.open(item);
   const hasAny = content.live.length + content.movies.length + content.series.length > 0;
 
@@ -143,10 +224,47 @@ export default function Home() {
         />
       ) : (
         <FocusScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-          {/* No section tiles here on purpose: the side menu already switches
-              between Live / Film / Serie / Cerca, so repeating them as big tiles
-              was the same choice twice, right where the eye lands first. Home is
-              now what you were watching and what to watch next. */}
+          <View style={styles.top}>
+            <View style={styles.tiles}>
+              {sections.map((sec, i) => (
+                <HomeTile
+                  key={sec.key}
+                  label={sec.label}
+                  icon={sec.icon}
+                  count={sec.n > 0 ? t(sec.countKey, { n: sec.n }) : undefined}
+                  autoFocus={i === 0}
+                  onPress={() => router.replace(sec.path as any)}
+                />
+              ))}
+            </View>
+            <View style={styles.side}>
+              {continueList.length ? (
+                <Shortcut
+                  label={t('home.continue')}
+                  icon="play-circle"
+                  onPress={() => {
+                    const e = continueList[0];
+                    play.playEntry(e.url, e.title, { key: e.key, poster: e.poster, resumeAt: e.position });
+                  }}
+                />
+              ) : null}
+              {favorites.length ? (
+                <Shortcut
+                  label={t('br.favorites')}
+                  icon="heart"
+                  onPress={() => openFolderShortcut(new Set(favorites.map((f) => f.id)), 'fav')}
+                />
+              ) : null}
+              {recents.length ? (
+                <Shortcut
+                  label={t('br.recent')}
+                  icon="time"
+                  onPress={() => openFolderShortcut(new Set(recents.map((r) => r.id)), 'recent')}
+                />
+              ) : null}
+            </View>
+          </View>
+
           {/* Recommendations (kept) */}
           <ContinueRail
             entries={continueList}
@@ -176,6 +294,38 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  top: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  tiles: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, alignContent: 'flex-start' },
+  tile: {
+    height: TILE_H,
+    flexGrow: 1,
+    flexBasis: 300,
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+  },
+  tileRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  tileIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.surfaceHi,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileFocus: { borderColor: colors.borderFocus, backgroundColor: colors.surfaceHi },
+  side: { width: 280, gap: spacing.sm },
+  shortcut: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
