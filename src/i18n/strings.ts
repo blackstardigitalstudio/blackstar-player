@@ -162,6 +162,9 @@ const it: Dict = {
   'upd.upToDate': 'L’app è già aggiornata.',
   'upd.checkFailed': 'Impossibile controllare gli aggiornamenti. Riprova più tardi.',
   'upd.installHint': 'La prima volta Android chiederà di consentire l’installazione da questa app.',
+  'upd.allowInstall': 'Consenti l’installazione',
+  'upd.allowHint':
+    'Se la schermata di installazione non compare, Android non sta permettendo a Blackstar Player di installare app. Aprilo qui sotto, attiva il permesso e riprova.',
   'err.title': 'Qualcosa si è bloccato',
   'err.body':
     'L’app non è riuscita ad aprire questa schermata. Prova a riaprirla. Se succede ancora, svuota la lista salvata: la ricarichiamo da capo dal tuo provider (non perdi profili né preferiti).',
@@ -428,6 +431,9 @@ const es: Dict = {
   'upd.upToDate': 'La app ya está actualizada.',
   'upd.checkFailed': 'No se pudo comprobar actualizaciones. Inténtalo más tarde.',
   'upd.installHint': 'La primera vez Android pedirá permitir la instalación desde esta app.',
+  'upd.allowInstall': 'Permitir la instalación',
+  'upd.allowHint':
+    'Si la pantalla de instalación no aparece, Android no está permitiendo a Blackstar Player instalar apps. Ábrelo aquí abajo, activa el permiso y vuelve a intentarlo.',
   'err.title': 'Algo se ha bloqueado',
   'err.body':
     'La app no ha podido abrir esta pantalla. Vuelve a intentarlo. Si sigue pasando, vacía la lista guardada: la cargamos de nuevo desde tu proveedor (no pierdes perfiles ni favoritos).',

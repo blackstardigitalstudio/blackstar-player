@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { APP_VERSION, UPDATE_REPO } from './version';
@@ -95,4 +96,29 @@ export async function downloadAndInstall(
     flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
     type: 'application/vnd.android.package-archive',
   });
+}
+
+/**
+ * Opens Android's "install unknown apps" screen FOR THIS APP. Without that
+ * permission the installer intent opens and closes with nothing to show, which
+ * is the number-one reason an update "never arrives" on a box: the download
+ * worked, the install was simply never allowed.
+ */
+export async function openInstallPermission(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  const pkg = (Constants.expoConfig as any)?.android?.package || 'studio.blackstar.player';
+  const tries: [string, Record<string, any>][] = [
+    ['android.settings.MANAGE_UNKNOWN_APP_SOURCES', { data: `package:${pkg}` }],
+    ['android.settings.MANAGE_UNKNOWN_APP_SOURCES', {}],
+    ['android.settings.SECURITY_SETTINGS', {}],
+  ];
+  for (const [action, extra] of tries) {
+    try {
+      await IntentLauncher.startActivityAsync(action, extra);
+      return true;
+    } catch {
+      // try the next, less specific, screen
+    }
+  }
+  return false;
 }

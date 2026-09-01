@@ -1,9 +1,10 @@
+import { usePathname } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Modal, StyleSheet, View } from 'react-native';
 import { Focusable } from '@/tv/Focusable';
 import { FocusLayer } from '@/tv/RemoteProvider';
 import { useT } from '@/i18n';
-import { checkForUpdate, downloadAndInstall, setUpdateTrigger, type UpdateInfo } from '@/lib/updater';
+import { checkForUpdate, downloadAndInstall, openInstallPermission, setUpdateTrigger, type UpdateInfo } from '@/lib/updater';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { PrimaryButton, Txt } from './ui';
 
@@ -28,15 +29,30 @@ export function UpdateGate() {
   // nothing. Every popup in this app is its own modal (box-app-rules R8).
   const [notice, setNotice] = useState<string | null>(null);
   const checking = useRef(false);
+  // A box is left switched on for days, so a check that only ran at startup meant
+  // the update simply never showed up until someone rebooted it.
+  const lastAuto = useRef(0);
+  // Version the user answered "Più tardi" to: don't re-offer it by itself in this
+  // session (a manual check still shows it). Asking again every hour is nagging.
+  const snoozed = useRef<string | null>(null);
+  // Never throw a dialog over someone's film. A postponed automatic check simply
+  // runs at the next tick, once they are back out of the player.
+  const pathname = usePathname();
+  const watching = useRef(false);
+  watching.current = pathname.includes('player');
 
   const run = async (manual: boolean) => {
     if (checking.current) return;
+    if (!manual && watching.current) return; // ask again when the video is over
     checking.current = true;
     if (manual) setCheckingUi(true);
     try {
+      if (!manual) lastAuto.current = Date.now();
       const u = await checkForUpdate();
       if (manual) setCheckingUi(false);
-      if (u) {
+      if (u && !manual && snoozed.current === u.version) {
+        // already declined this exact version in this session
+      } else if (u) {
         setError(null);
         setBusy(false);
         setProgress(0);
@@ -56,8 +72,22 @@ export function UpdateGate() {
   useEffect(() => {
     const timer = setTimeout(() => run(false), 2500); // don't fight the first render
     setUpdateTrigger(() => run(true));
+
+    // Keep looking while the app stays open, and again whenever it comes back to
+    // the foreground — throttled, so we never hammer GitHub.
+    const MIN_GAP = 60 * 60 * 1000; // 1h
+    const maybe = () => {
+      if (Date.now() - lastAuto.current >= MIN_GAP) run(false);
+    };
+    const every = setInterval(maybe, 30 * 60 * 1000);
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') maybe();
+    });
+
     return () => {
       clearTimeout(timer);
+      clearInterval(every);
+      sub.remove();
       setUpdateTrigger(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,14 +181,35 @@ export function UpdateGate() {
           ) : null}
 
           {error ? (
-            <Txt variant="small" color={colors.danger} style={{ marginTop: spacing.sm }}>
-              {error}
-            </Txt>
+            <>
+              <Txt variant="small" color={colors.danger} style={{ marginTop: spacing.sm }}>
+                {error}
+              </Txt>
+              <Txt variant="tiny" color={colors.textMuted} style={{ marginTop: 6 }}>
+                {t('upd.allowHint')}
+              </Txt>
+              <View style={{ marginTop: spacing.sm, alignItems: 'flex-start' }}>
+                <Focusable onSelect={() => openInstallPermission()} style={styles.later} focusStyle={{ borderColor: colors.borderFocus }}>
+                  {(f) => (
+                    <Txt variant="small" color={f ? colors.text : colors.accent}>
+                      {t('upd.allowInstall')}
+                    </Txt>
+                  )}
+                </Focusable>
+              </View>
+            </>
           ) : null}
 
           {!busy ? (
             <View style={styles.row}>
-              <Focusable onSelect={() => setInfo(null)} style={styles.later} focusStyle={{ borderColor: colors.borderFocus }}>
+              <Focusable
+                onSelect={() => {
+                  snoozed.current = info.version;
+                  setInfo(null);
+                }}
+                style={styles.later}
+                focusStyle={{ borderColor: colors.borderFocus }}
+              >
                 {(f) => (
                   <Txt variant="body" color={f ? colors.text : colors.textMuted}>
                     {t('upd.later')}
