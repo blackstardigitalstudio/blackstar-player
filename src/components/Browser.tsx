@@ -202,6 +202,7 @@ export function Browser({
 
   const livePreview = useStore((s) => s.settings.livePreview);
   const browseLayout = useStore((s) => s.settings.browseLayout);
+  const itemSort = useStore((s) => s.settings.itemSort);
   const updateSettings = useStore((s) => s.updateSettings);
 
   const openFolder = (id: string) => {
@@ -374,6 +375,25 @@ export function Browser({
     );
   }
 
+  // Order INSIDE a folder. 'default' keeps the provider's own order, which is
+  // often deliberate (news first, then sport…), so it stays the default.
+  const sortItems = (list: MediaItem[]): MediaItem[] => {
+    if (itemSort === 'az') return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    if (itemSort === 'number') {
+      return [...list].sort((a, b) => {
+        const an = typeof a.number === 'number' ? a.number : Number.MAX_SAFE_INTEGER;
+        const bn = typeof b.number === 'number' ? b.number : Number.MAX_SAFE_INTEGER;
+        return an - bn || a.name.localeCompare(b.name);
+      });
+    }
+    return list;
+  };
+  const sortLabel =
+    itemSort === 'az' ? t('br.sortAz') : itemSort === 'number' ? t('br.sortNumber') : t('br.sortDefault');
+  // Channel numbers only exist on Live, so that step is skipped elsewhere.
+  const nextSort = () =>
+    itemSort === 'default' ? (kind === 'live' ? 'number' : 'az') : itemSort === 'number' ? 'az' : 'default';
+
   const filteredBy = (id: string) =>
     id === 'all'
       ? items
@@ -390,7 +410,7 @@ export function Browser({
       <TVFocusGuideView autoFocus style={{ flex: 1 }}>
         {beside(
           <MediaGrid
-            items={items}
+            items={sortItems(items)}
             onSelect={onSelect}
             variant={variant}
             layout={browseLayout}
@@ -416,7 +436,7 @@ export function Browser({
             : isCont
               ? t('home.continue')
               : cats.find((c) => c.id === openCat)?.name ?? title;
-    const channels = isCont ? [] : filteredBy(openCat);
+    const channels = isCont ? [] : sortItems(filteredBy(openCat));
     const count = isCont ? continueEntries.length : channels.length;
     const asList = browseLayout === 'list';
     const header = (
@@ -443,6 +463,17 @@ export function Browser({
                 <Ionicons name={asList ? 'grid' : 'list'} size={20} color={colors.accent} />
                 <Txt variant="small" color={f ? colors.text : colors.accent} style={{ fontWeight: '700' }}>
                   {asList ? t('br.asGrid') : t('br.asList')}
+                </Txt>
+              </View>
+            )}
+          </Focusable>
+          {/* Sort: shows the order you are IN, press to move to the next one. */}
+          <Focusable onSelect={() => updateSettings({ itemSort: nextSort() })} style={styles.backRow} focusStyle={styles.backRowFocus}>
+            {(f) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="swap-vertical" size={20} color={colors.accent} />
+                <Txt variant="small" color={f ? colors.text : colors.accent} style={{ fontWeight: '700' }}>
+                  {sortLabel}
                 </Txt>
               </View>
             )}

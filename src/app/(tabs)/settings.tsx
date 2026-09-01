@@ -8,7 +8,7 @@ import { Txt } from '@/components/ui';
 import { Focusable } from '@/tv/Focusable';
 import { FocusScrollView } from '@/tv/FocusScroll';
 import { useStore, type PlayerMode } from '@/store/useStore';
-import { openCastSettings } from '@/lib/cast';
+import { openCastSettings, openDisplaySettings } from '@/lib/cast';
 import { requestUpdateCheck } from '@/lib/updater';
 import { APP_VERSION } from '@/lib/version';
 import { useT } from '@/i18n';
@@ -228,6 +228,10 @@ export default function Settings() {
           value={s.settings.liveExt.toUpperCase()}
           onPress={() => s.updateSettings({ liveExt: s.settings.liveExt === 'ts' ? 'm3u8' : 'ts' })}
         />
+        <Row icon="pulse" label={t('set.smooth')} onPress={() => openDisplaySettings()} />
+        <Txt variant="tiny" color={colors.textMuted} style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+          {t('set.smoothHint')}
+        </Txt>
         <Row
           icon="eye"
           label={t('set.livePreview')}

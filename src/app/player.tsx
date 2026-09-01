@@ -93,9 +93,14 @@ export default function Player() {
     // the player restarts on an almost-empty buffer and runs dry again seconds
     // later. Fill much further ahead, and demand a real cushion before resuming.
     p.bufferOptions = {
-      preferredForwardBufferDuration: 50,
+      preferredForwardBufferDuration: 30,
       minBufferForPlayback: 5,
       prioritizeTimeOverSizeThreshold: true,
+      // Cap it in BYTES too. prioritizeTimeOverSizeThreshold alone would chase
+      // the time target on a high-bitrate channel (8 Mbps x 30s = 30 MB) and a
+      // 1 GB Fire TV Stick has no room for that — RAM is exactly what gets this
+      // app killed on a box.
+      maxBufferBytes: 32 * 1024 * 1024,
     };
     p.play();
   });

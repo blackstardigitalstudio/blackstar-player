@@ -29,6 +29,9 @@ export interface Settings {
   livePreview: boolean;
   /** How a section lists its titles: squares side by side, or one per row. */
   browseLayout: 'grid' | 'list';
+  /** Order of the titles INSIDE a folder (the provider's own order, A-Z, or by
+   *  channel number). Separate from categoryOrder, which sorts the folders. */
+  itemSort: 'default' | 'az' | 'number';
   showChannelNumbers: boolean;
   bannerText: string;
   autoCleanupHours: number;
@@ -59,6 +62,7 @@ const DEFAULT_SETTINGS: Settings = {
   aspectMode: 'contain',
   livePreview: true,
   browseLayout: 'grid',
+  itemSort: 'default',
   showChannelNumbers: true,
   bannerText: 'Blackstar Player',
   autoCleanupHours: 6,

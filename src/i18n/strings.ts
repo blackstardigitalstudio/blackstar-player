@@ -104,6 +104,9 @@ const it: Dict = {
   'br.searchSeries': 'Cerca in tutte le serie',
   'br.foundFor': '{n} risultati per “{q}”',
   'br.clearSearch': 'Cancella la ricerca',
+  'br.sortDefault': 'Ordine del fornitore',
+  'br.sortAz': 'Dalla A alla Z',
+  'br.sortNumber': 'Per numero',
 
   'title.live': 'Live TV',
   'title.movies': 'Film',
@@ -140,6 +143,9 @@ const it: Dict = {
   'set.aspectFill': 'Estendi (deforma)',
   'set.liveFormat': 'Tipo di segnale (se il Live non parte, cambialo)',
   'set.livePreview': 'Mostra l’anteprima del canale mentre scegli',
+  'set.smooth': 'Video a scatti? Apri le impostazioni schermo',
+  'set.smoothHint':
+    'Nelle impostazioni della TV/box attiva “Corrispondenza frequenza fotogrammi” (Match frame rate). Se la TV va a 60 immagini al secondo e il canale ne manda 25 o 50, ogni tanto il box deve ripetere un fotogramma: si vede come uno scatto, anche se il video non si sta caricando.',
   'set.survival': 'Riprova da solo se un canale si blocca',
   'set.autostart': 'Avvia ultimo canale all’apertura',
   'set.showNumbers': 'Mostra numeri canale (zapping)',
@@ -373,6 +379,9 @@ const es: Dict = {
   'br.searchSeries': 'Buscar en todas las series',
   'br.foundFor': '{n} resultados para “{q}”',
   'br.clearSearch': 'Borrar la búsqueda',
+  'br.sortDefault': 'Orden del proveedor',
+  'br.sortAz': 'De la A a la Z',
+  'br.sortNumber': 'Por número',
 
   'title.live': 'TV en vivo',
   'title.movies': 'Películas',
@@ -409,6 +418,9 @@ const es: Dict = {
   'set.aspectFill': 'Estirar (deforma)',
   'set.liveFormat': 'Tipo de señal (si el Live no arranca, cámbialo)',
   'set.livePreview': 'Mostrar la vista previa del canal mientras eliges',
+  'set.smooth': '¿Vídeo a tirones? Abre los ajustes de pantalla',
+  'set.smoothHint':
+    'En los ajustes de la TV/box activa “Coincidencia de frecuencia de fotogramas” (Match frame rate). Si la TV va a 60 imágenes por segundo y el canal envía 25 o 50, cada cierto rato el box repite un fotograma: se ve como un tirón, aunque el vídeo no se esté cargando.',
   'set.survival': 'Reintenta solo si un canal se bloquea',
   'set.autostart': 'Iniciar el último canal al abrir',
   'set.showNumbers': 'Mostrar números de canal (zapping)',
