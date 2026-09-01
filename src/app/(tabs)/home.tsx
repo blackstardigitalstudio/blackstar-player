@@ -22,7 +22,9 @@ import { colors, radius, spacing } from '@/theme/tokens';
 // Fires the auto-start-last-channel at most once per app launch (module scope).
 let autoStartedThisLaunch = false;
 
-const TILE_H = 104;
+const TILE_H = 118;
+/** Past this many characters the label drops a size so two lines still fit. */
+const LONG_LABEL = 22;
 
 /**
  * Set-top-box tile: wide and low, round icon badge, big label — the arrangement
@@ -38,7 +40,7 @@ function HomeTile({ label, icon, count, autoFocus, onPress }: { label: string; i
             <Ionicons name={icon} size={30} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Txt variant="h3" numberOfLines={1} style={{ fontWeight: '800' }}>
+            <Txt variant={label.length > LONG_LABEL ? 'body' : 'h3'} numberOfLines={2} style={{ fontWeight: '800' }}>
               {label}
             </Txt>
             {count ? (
@@ -60,7 +62,7 @@ function Shortcut({ label, icon, onPress }: { label: string; icon: any; onPress:
       {(f) => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <Ionicons name={icon} size={22} color={colors.accent} />
-          <Txt variant="body" numberOfLines={1} color={f ? colors.text : colors.textMuted} style={{ fontWeight: '700', flex: 1 }}>
+          <Txt variant="body" numberOfLines={2} color={f ? colors.text : colors.textMuted} style={{ fontWeight: '700', flex: 1 }}>
             {label}
           </Txt>
         </View>

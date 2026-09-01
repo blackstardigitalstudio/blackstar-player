@@ -27,8 +27,13 @@ import { Empty, Txt } from './ui';
 // label beside it: the set-top-box arrangement (Duplex, and every launcher on a
 // TV) that reads from across the room. A dense grid of small squares makes you
 // lean in and read; this one you recognise at a glance.
-const TILE_H = 104;
+// Two lines of name + the count. Provider category names get long ("SPORT |
+// DAZN & SKY CALCIO FHD"), and a one-line tile simply hid the half that tells
+// them apart — which is the half you were reading.
+const TILE_H = 118;
 const TILE_MIN_W = 300;
+/** Past this many characters the name drops a size so two lines still fit. */
+const LONG_NAME = 22;
 
 /**
  * Where you were, per section — survives leaving for the player AND switching
@@ -107,10 +112,10 @@ function FolderTile({
             <Ionicons name={icon} size={30} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Txt variant="h3" numberOfLines={1} style={{ fontWeight: '800' }}>
+            <Txt variant={name.length > LONG_NAME ? 'body' : 'h3'} numberOfLines={2} style={{ fontWeight: '800' }}>
               {name}
             </Txt>
-            <Txt variant="small" color={colors.textMuted} style={{ marginTop: 2 }}>
+            <Txt variant="tiny" color={colors.textMuted} style={{ marginTop: 2 }}>
               {t(countKey, { n: count })}
             </Txt>
           </View>
