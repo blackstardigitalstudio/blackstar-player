@@ -6,11 +6,13 @@ import { FocusList, useListScroll } from '@/tv/FocusList';
 import { useT } from '@/i18n';
 import { useStore } from '@/store/useStore';
 import { sortCategories } from '@/lib/categories';
+import { searchItems } from '@/lib/search';
 import { colors, radius, spacing } from '@/theme/tokens';
 import type { Category, MediaItem, MediaKind, ProgressEntry } from '@/lib/types';
 import { MediaGrid } from './Rail';
 import { ContinueGrid } from './ContinueRail';
 import { LivePreview, setPreviewChannel } from './LivePreview';
+import { TVKeyboard } from './TVKeyboard';
 import { Empty, Txt } from './ui';
 
 // Box (D-pad) version of the phone's folder-tile browser: categories are big
@@ -192,6 +194,11 @@ export function Browser({
   // hasTVPreferredFocus and could fight the native focus.
   const [restoreId, setRestoreId] = useState<string | null>(() => spotOf(kind).itemId);
 
+  // Section-wide search: it looks through EVERY folder of this section, which is
+  // the whole point — you rarely know which category a title was filed under.
+  const [query, setQuery] = useState('');
+  const [kb, setKb] = useState(false);
+
   const livePreview = useStore((s) => s.settings.livePreview);
   const browseLayout = useStore((s) => s.settings.browseLayout);
   const updateSettings = useStore((s) => s.updateSettings);
@@ -229,14 +236,20 @@ export function Browser({
   // layout's "go Home" handler, so it wins. Closed folder → no listener → the
   // layout handles BACK as before.
   useEffect(() => {
-    if (!openCat) return;
+    if (!openCat && !query) return;
     const onBack = () => {
+      // Peel one layer at a time: search results → folder → (the tabs layout
+      // takes over and goes Home).
+      if (query) {
+        setQuery('');
+        return true;
+      }
       closeFolder();
       return true;
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
-  }, [openCat]);
+  }, [openCat, query]);
 
   // If the list refreshes and the open folder id disappears, fall back so the
   // grid never ends up mysteriously empty.
@@ -263,6 +276,96 @@ export function Browser({
   const allLabel = kind === 'movie' ? t('br.allMovies') : kind === 'series' ? t('br.allSeries') : t('br.allChannels');
   const countKey = kind === 'movie' ? 'br.moviesCount' : kind === 'series' ? 'br.seriesCount' : 'br.channelsCount';
 
+  const searchPh =
+    kind === 'movie' ? t('br.searchMovies') : kind === 'series' ? t('br.searchSeries') : t('br.searchLive');
+
+  // Live only: the small window beside the grid. Films/series would gain nothing
+  // from it and would just cost a second stream.
+  const canPreview = kind === 'live' && livePreview;
+  const beside = (node: React.ReactElement) =>
+    canPreview ? (
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <View style={{ flex: 1 }}>{node}</View>
+        <LivePreview />
+      </View>
+    ) : (
+      node
+    );
+
+  // The magnifier sits ABOVE everything in the section, folder grid included:
+  // you should never have to guess which category a title was filed under.
+  // Typing goes through the app's own TVKeyboard — the system IME is unusable
+  // with a D-pad on react-native-tvos.
+  const searchBar = (
+    <View style={styles.searchBar}>
+      <Focusable onSelect={() => setKb(true)} style={{ flex: 1 }} focusStyle={{}}>
+        {(ring) => (
+          <View style={[styles.searchInner, ring && { borderColor: colors.borderFocus, backgroundColor: colors.surfaceHi }]}>
+            <Ionicons name="search" size={20} color={ring ? colors.accent : colors.textMuted} />
+            <Txt variant="small" numberOfLines={1} color={query ? colors.text : colors.textFaint} style={{ flex: 1 }}>
+              {query || searchPh}
+            </Txt>
+          </View>
+        )}
+      </Focusable>
+      {query ? (
+        <Focusable onSelect={() => setQuery('')} style={styles.searchClear} focusStyle={styles.backRowFocus}>
+          {(f) => <Ionicons name="close" size={20} color={f ? colors.text : colors.textMuted} />}
+        </Focusable>
+      ) : null}
+      <TVKeyboard
+        visible={kb}
+        title={searchPh}
+        value={query}
+        onDone={(text) => {
+          setQuery(text);
+          setKb(false);
+        }}
+        onCancel={() => setKb(false)}
+      />
+    </View>
+  );
+  const frame = (node: React.ReactElement) => (
+    <View style={{ flex: 1 }}>
+      {searchBar}
+      {node}
+    </View>
+  );
+
+  // Searching → results from the WHOLE section, folders ignored.
+  if (query.trim().length >= 2) {
+    const results = searchItems(query, items, 300).map((r) => r.item);
+    const resultsHeader = (
+      <Txt variant="h2" style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+        {t('br.foundFor', { n: results.length, q: query.trim() })}
+      </Txt>
+    );
+    return frame(
+      <TVFocusGuideView autoFocus style={{ flex: 1 }}>
+        {results.length ? (
+          beside(
+            <MediaGrid
+              items={results}
+              onSelect={onSelect}
+              variant={variant}
+              layout={browseLayout}
+              header={resultsHeader}
+              autoFocusFirst
+              onItemFocus={onCardFocus}
+            />,
+          )
+        ) : (
+          <Empty
+            icon="search-outline"
+            title={t('search.noResults', { q: query.trim() })}
+            hint={t('search.noResultsHint')}
+            action={{ label: t('br.clearSearch'), icon: 'close', onPress: () => setQuery('') }}
+          />
+        )}
+      </TVFocusGuideView>,
+    );
+  }
+
   const filteredBy = (id: string) =>
     id === 'all'
       ? items
@@ -275,10 +378,20 @@ export function Browser({
   // No categories at all (e.g. a flat M3U) → nothing to fold; show everything.
   const hasFolders = cats.length || favItems.length || recentItems.length || continueEntries.length;
   if (!hasFolders) {
-    return (
+    return frame(
       <TVFocusGuideView autoFocus style={{ flex: 1 }}>
-        <MediaGrid items={items} onSelect={onSelect} variant={variant} autoFocusFirst />
-      </TVFocusGuideView>
+        {beside(
+          <MediaGrid
+            items={items}
+            onSelect={onSelect}
+            variant={variant}
+            layout={browseLayout}
+            autoFocusFirst
+            focusItemId={restoreId}
+            onItemFocus={onCardFocus}
+          />,
+        )}
+      </TVFocusGuideView>,
     );
   }
 
@@ -344,28 +457,19 @@ export function Browser({
         layout={browseLayout}
       />
     );
-    // Live only: a small window beside the grid shows the focused channel, so you
-    // can check what is on without leaving the list. Films/series would gain
-    // nothing from it and would just cost a second stream.
-    const withPreview = kind === 'live' && livePreview && !isCont;
-    return (
+    return frame(
       <TVFocusGuideView autoFocus style={{ flex: 1 }}>
         {isCont ? (
           <ContinueGrid entries={continueEntries} onSelect={(e) => onResume?.(e)} header={header} />
-        ) : withPreview ? (
-          <View style={{ flex: 1, flexDirection: 'row' }}>
-            <View style={{ flex: 1 }}>{grid}</View>
-            <LivePreview />
-          </View>
         ) : (
-          grid
+          beside(grid)
         )}
-      </TVFocusGuideView>
+      </TVFocusGuideView>,
     );
   }
 
   // Level 1: the folder grid.
-  return (
+  return frame(
     <FolderGrid
       title={title}
       total={items.length}
@@ -380,7 +484,7 @@ export function Browser({
       countKey={countKey}
       focusId={spotOf(kind).lastCat}
       onOpen={openFolder}
-    />
+    />,
   );
 }
 
@@ -501,6 +605,30 @@ function FolderGrid({
 }
 
 const styles = StyleSheet.create({
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  searchInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  searchClear: {
+    padding: 12,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
   folderHeader: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
   folder: {
     height: TILE_H,

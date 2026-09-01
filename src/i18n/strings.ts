@@ -99,6 +99,11 @@ const it: Dict = {
   'br.pickFolder': 'Scegli una categoria',
   'br.asGrid': 'Griglia',
   'br.asList': 'Elenco',
+  'br.searchLive': 'Cerca in tutti i canali',
+  'br.searchMovies': 'Cerca in tutti i film',
+  'br.searchSeries': 'Cerca in tutte le serie',
+  'br.foundFor': '{n} risultati per “{q}”',
+  'br.clearSearch': 'Cancella la ricerca',
 
   'title.live': 'Live TV',
   'title.movies': 'Film',
@@ -360,6 +365,11 @@ const es: Dict = {
   'br.pickFolder': 'Elige una categoría',
   'br.asGrid': 'Cuadrícula',
   'br.asList': 'Lista',
+  'br.searchLive': 'Buscar en todos los canales',
+  'br.searchMovies': 'Buscar en todas las películas',
+  'br.searchSeries': 'Buscar en todas las series',
+  'br.foundFor': '{n} resultados para “{q}”',
+  'br.clearSearch': 'Borrar la búsqueda',
 
   'title.live': 'TV en vivo',
   'title.movies': 'Películas',
