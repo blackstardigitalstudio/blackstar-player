@@ -127,6 +127,9 @@ export function MediaGrid({
         paddingBottom: spacing.xxl,
         ...(list ? { paddingHorizontal: spacing.lg } : null),
       }}
+      // ~2 screens of rows either side of the focused one: plenty for a one-step
+      // D-pad move, and roughly a third of the images the default would mount.
+      windowSize={7}
       initialNumToRender={cols * 3}
       // Two rows per batch instead of four: each poster row costs remote images
       // to fetch and decode, and a fat batch blocks the JS thread long enough for

@@ -80,7 +80,14 @@ export const FocusList = forwardRef<FlatList<any>, FlatListProps<any>>(function 
       // engine's SYNCHRONOUS re-home now keeps the ring alive even if the focused
       // card is ever virtualized away, so a smaller window can't lose the cursor.
       removeClippedSubviews={false}
-      windowSize={Math.max(11, props.windowSize ?? 11)}
+      // 11 screens is the DEFAULT, not a floor: a caller that knows its rows are
+      // expensive may ask for fewer. A poster grid mounts ~120 remote images at
+      // 11, and every one of them is a native view plus a network fetch — that is
+      // felt as the selection ring arriving late behind the remote, because the
+      // ring is drawn from JS. What protects the focused cell is having enough
+      // rows mounted AROUND it for a one-step move, and that needs far less
+      // than five screens in each direction.
+      windowSize={props.windowSize ?? 11}
     />
   );
 });

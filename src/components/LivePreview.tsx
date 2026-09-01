@@ -137,8 +137,9 @@ export function LivePreview() {
 
   useEffect(() => {
     const sub = player.addListener('statusChange', ({ status }) => {
-      if (status === 'readyToPlay') setState('playing');
-      else if (status === 'loading') setState('loading');
+      // 'playing' is set by onFirstFrameRender, not here: readyToPlay only means
+      // enough data arrived, not that a picture reached the screen.
+      if (status === 'loading') setState('loading');
       else if (status === 'error') setState('error');
     });
     return () => sub.remove();
@@ -149,7 +150,21 @@ export function LivePreview() {
   return (
     <View style={styles.panel} pointerEvents="none">
       <View style={styles.screen}>
-        <VideoView player={player} style={StyleSheet.absoluteFill} contentFit={aspectMode} nativeControls={false} />
+        <VideoView
+          player={player}
+          style={StyleSheet.absoluteFill}
+          contentFit={aspectMode}
+          nativeControls={false}
+          // A SurfaceView is punched THROUGH the app window: it ignores the
+          // parent's rounded corners and clipping, and does not layer reliably
+          // against the rest of the UI — which is fine for a full-screen player
+          // and wrong for a small panel sitting beside a scrolling grid. The docs
+          // name textureView as the fix for exactly this case.
+          surfaceType="textureView"
+          // Status can say readyToPlay while nothing has actually been drawn yet.
+          // The first real frame is the only honest signal that it is working.
+          onFirstFrameRender={() => setState('playing')}
+        />
         {state !== 'playing' ? (
           <View style={styles.overlay}>
             {state === 'error' ? (

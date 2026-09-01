@@ -65,7 +65,9 @@ function Square({ item, focused, fallbackIcon }: { item: MediaItem; focused: boo
   );
 }
 
-export function PosterCard({ item, focused }: { item: MediaItem; focused: boolean }) {
+// memo: a card only ever changes when IT gains or loses focus. Without this a
+// parent re-render walks every mounted card's subtree — image included.
+export const PosterCard = React.memo(function PosterCard({ item, focused }: { item: MediaItem; focused: boolean }) {
   return (
     <View style={{ width: POSTER_W }}>
       <Square item={item} focused={focused} fallbackIcon={item.kind === 'series' ? 'albums' : 'film'} />
@@ -84,7 +86,7 @@ export function PosterCard({ item, focused }: { item: MediaItem; focused: boolea
       </View>
     </View>
   );
-}
+});
 
 // --- LIST layout ------------------------------------------------------------
 // One title per row, read left to right like a channel list on a set-top box.
@@ -132,7 +134,7 @@ export function ListRow({ item, focused }: { item: MediaItem; focused: boolean }
   );
 }
 
-export function ChannelCard({ item, focused }: { item: MediaItem; focused: boolean }) {
+export const ChannelCard = React.memo(function ChannelCard({ item, focused }: { item: MediaItem; focused: boolean }) {
   const showNumbers = useStore((s) => s.settings.showChannelNumbers);
   return (
     <View style={{ width: TILE_W }}>
@@ -151,7 +153,7 @@ export function ChannelCard({ item, focused }: { item: MediaItem; focused: boole
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
